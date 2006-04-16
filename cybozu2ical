@@ -135,8 +135,6 @@ cybozu2ical - Convert CybozuOffice6 calendar into iCal format
 
 =head1 DESCRIPTION
 
-=head1 DESCRIPTION
-
 C<cybozu2ical> is a command line application that fetches Cybozu
 Office 6 calendar items and converts them into a iCal file.  It allows
 you to easily integrate the Cybozu Calendar into iCalendar-enabled
