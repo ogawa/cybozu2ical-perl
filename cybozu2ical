@@ -126,7 +126,7 @@ sub dt2ical {
 1;
 =head1 NAME
 
-cybozu2ical - Convert CybozuOffice6 calendar into iCal format
+cybozu2ical - Convert Cybozu Office 6 calendar into iCal format
 
 =head1 SYNOPSIS
 
@@ -149,6 +149,8 @@ This application requires perl 5.8.0 with following Perl modules
 installed on your box.
 
 =over 4
+
+=item Text::CSV_XS
 
 =item Data::ICal
 
