@@ -14,10 +14,16 @@ use Data::ICal::Entry::TimeZone;
 use Data::ICal::Entry::TimeZone::Standard;
 use DateTime;
 use DateTime::TimeZone;
+use Pod::Usage;
+use Getopt::Long;
 
 our $VERSION = '0.02';
 
-my $cfg = YAML::LoadFile($ARGV[0] || 'config.yaml');
+my %opt = (conf => 'config.yaml');
+GetOptions(\%opt, 'help', 'conf=s') or pod2usage(2);
+pod2usage(1) if $opt{help};
+
+my $cfg = YAML::LoadFile($opt{conf});
 my $tz = DateTime::TimeZone->new(name => $cfg->{time_zone} || 'Asia/Tokyo');
 
 my $ua = LWP::UserAgent->new();
@@ -131,7 +137,7 @@ cybozu2ical - Convert Cybozu Office 6 calendar into iCal format
 =head1 SYNOPSIS
 
   % cybozu2ical
-  % cybozu2ical /path/to/config.yaml
+  % cybozu2ical --conf /path/to/config.yaml
 
 =head1 DESCRIPTION
 
@@ -166,9 +172,9 @@ This application has a command-line option as follows:
 
 =over 4
 
-=item path/to/config.yaml
+=item --conf path/to/config.yaml
 
-Specified the path to a configuration file. By default, C<config.yaml>
+Specifies the path to a configuration file. By default, C<config.yaml>
 in the current directory.
 
 =back
