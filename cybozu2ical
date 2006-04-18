@@ -42,9 +42,7 @@ die "Cannot access Cybozu Office 6 (" . $cfg->{cybozu_url} . ")."
 
 my $content = $res->content;
 Encode::from_to($content, 'shiftjis', 'utf8');
-
 my @lines = grep /^\d+,ts\.\d+,/, split(/\r?\n/, $content);
-my $csv = Text::CSV_XS->new({ binary => 1 });
 
 my $vcalendar = Data::ICal->new();
 $vcalendar->add_properties(
@@ -55,10 +53,10 @@ $vcalendar->add_properties(
 );
 
 # current timestamp
-my $dtstamp = dt2ical(DateTime->from_epoch(epoch => time));
+my $dtstamp = dt2ical(DateTime->now);
 
-while ($#lines != -1) {
-    my $line = shift(@lines);
+my $csv = Text::CSV_XS->new({ binary => 1 });
+for my $line (@lines) {
     $csv->parse($line)
 	or die 'failed to parse CSV input.';
     my @fields = $csv->fields;
@@ -172,7 +170,7 @@ This application has a command-line option as follows:
 
 =over 4
 
-=item --conf path/to/config.yaml
+=item --conf /path/to/config.yaml
 
 Specifies the path to a configuration file. By default, C<config.yaml>
 in the current directory.
