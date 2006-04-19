@@ -49,7 +49,8 @@ $vcalendar->add_properties(
     prodid => 'Cybozu2ICal',
     version => $VERSION,
     calscale => 'GREGORIAN',
-    method => 'PUBLISH'
+    method => 'PUBLISH',
+    $cfg->{calname} ? ('X-WR-CALNAME' => $cfg->{calname}) : (),
 );
 
 # current timestamp
