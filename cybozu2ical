@@ -17,7 +17,7 @@ use DateTime::TimeZone;
 use Pod::Usage;
 use Getopt::Long;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 my %opt = (conf => 'config.yaml');
 GetOptions(\%opt, 'help', 'conf=s') or pod2usage(2);
@@ -62,26 +62,28 @@ for my $line (@lines) {
     my @fields = $csv->fields;
     next if $#fields < 13; # num. of fields
 
-    next if $fields[2]; # skip recurrent events
+    my $vevent = Data::ICal::Entry::Event->new();
 
-    my $epoch = $fields[1];
-    $epoch =~ s/ts\.//;
+    if (my $freq = $fields[7]) {
+	# TODO: handle recurrent events
+	warn "Recurrent events[$freq] cannot be handled.";
+    } else {
+	my $dt = cydate2dt($fields[3], $fields[5], $tz);
+	my $dtstart = ($fields[5] !~ /^:$/) ?
+	    dt2ical($dt) : $dt->ymd('');
+	$dt = cydate2dt($fields[4], $fields[6], $tz);
+	my $dtend = ($fields[6] !~ /^:$/) ?
+	    dt2ical($dt) : $dt->add(days => 1)->ymd('');
+
+	$vevent->add_properties(dtstart => $dtstart, dtend => $dtend);
+    }
+
+    my($epoch) = $fields[1] =~ m/ts\.(\d+)/;
     my $created = dt2ical(DateTime->from_epoch(epoch => $epoch));
 
-    my $dt1 = cydate2dt($fields[3], $fields[5], $tz);
-    my $dtstart = ($fields[5] !~ /^:$/) ?
-	dt2ical($dt1) : $dt1->ymd('');
-
-    my $dt2 = cydate2dt($fields[4], $fields[6], $tz);
-    my $dtend = ($fields[6] !~ /^:$/) ?
-	dt2ical($dt2) : $dt2->add(days => 1)->ymd('');
-
-    my $vevent = Data::ICal::Entry::Event->new();
     $vevent->add_properties(
 	summary => $fields[12] || '',
 	description => $fields[13] || $fields[12] || '',
-	dtstart => $dtstart,
-	dtend => $dtend,
 	dtstamp => $dtstamp,
 	created => $created
     );
