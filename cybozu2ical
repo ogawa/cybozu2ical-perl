@@ -46,8 +46,7 @@ my @lines = grep /^\d+,ts\.\d+,/, split(/\r?\n/, $content);
 
 my $vcalendar = Data::ICal->new();
 $vcalendar->add_properties(
-    prodid => 'Cybozu2ICal',
-    version => $VERSION,
+    prodid => "-//as-is.net/Cybozu2ICal $VERSION//EN",
     calscale => 'GREGORIAN',
     method => 'PUBLISH',
     $cfg->{calname} ? ('X-WR-CALNAME' => $cfg->{calname}) : (),
@@ -62,6 +61,8 @@ for my $line (@lines) {
 	or die 'failed to parse CSV input.';
     my @fields = $csv->fields;
     next if $#fields < 13; # num. of fields
+
+    next if $fields[2]; # skip recurrent events
 
     my $epoch = $fields[1];
     $epoch =~ s/ts\.//;
