@@ -82,8 +82,8 @@ for my $line (@lines) {
     my $created = dt2ical(DateTime->from_epoch(epoch => $epoch));
 
     $vevent->add_properties(
-	summary => $fields[12] || '',
-	description => $fields[13] || $fields[12] || '',
+	summary => Encode::decode_utf8($fields[12] || ''),
+	description => Encode::decode_utf8($fields[13] || $fields[12] || ''),
 	dtstamp => $dtstamp,
 	created => $created
     );
@@ -111,7 +111,7 @@ $vtimezone->add_entry($standard);
 
 $vcalendar->add_entry($vtimezone);
 
-print $vcalendar->as_string;
+print Encode::encode_utf8($vcalendar->as_string);
 
 sub cydate2dt {
     my($date, $time, $tz) = @_;
