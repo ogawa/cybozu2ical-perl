@@ -6,7 +6,7 @@
 use strict;
 use YAML;
 use LWP::UserAgent;
-use Encode;
+use Encode qw/from_to decode_utf8 encode_utf8/;
 use Text::CSV_XS;
 use Data::ICal;
 use Data::ICal::Entry::Event;
@@ -18,6 +18,7 @@ use Pod::Usage;
 use Getopt::Long;
 
 our $VERSION = '0.04';
+our $ENCODE_NCR = 1;
 
 my %opt = (conf => 'config.yaml');
 GetOptions(\%opt, 'help', 'conf=s') or pod2usage(2);
@@ -41,7 +42,7 @@ die "Cannot access Cybozu Office 6 (" . $cfg->{cybozu_url} . ")."
     unless $res->is_success;
 
 my $content = $res->content;
-Encode::from_to($content, 'shiftjis', 'utf8');
+from_to($content, 'shiftjis', 'utf8');
 my @lines = grep /^\d+,ts\.\d+,/, split(/\r?\n/, $content);
 
 my $vcalendar = Data::ICal->new();
@@ -68,13 +69,17 @@ for my $line (@lines) {
 	# TODO: handle recurrent events
 	warn "Recurrent events[$freq] cannot be handled.";
     } else {
-	my $dt = cydate2dt($fields[3], $fields[5], $tz);
-	my $dtstart = ($fields[5] !~ /^:$/) ?
-	    dt2ical($dt) : $dt->ymd('');
-	$dt = cydate2dt($fields[4], $fields[6], $tz);
-	my $dtend = ($fields[6] !~ /^:$/) ?
-	    dt2ical($dt) : $dt->add(days => 1)->ymd('');
-
+	my ($dtstart, $dtend);
+	my $dt0 = cydate2dt($fields[3], $fields[5], $tz);
+	my $dt1 = cydate2dt($fields[4], $fields[6], $tz);
+	if ($fields[5] =~ /^:$/) {
+	    $dtstart = $dt0->ymd('');
+	    $dtend = $dt1->add(days => 1)->ymd('');
+	} else {
+	    $dtstart = dt2ical($dt0);
+	    $dtend = ($fields[6] =~ /^:$/) ?
+		$dt0->add(minutes => 10) : dt2ical($dt1);
+	}
 	$vevent->add_properties(dtstart => $dtstart, dtend => $dtend);
     }
 
@@ -82,8 +87,8 @@ for my $line (@lines) {
     my $created = dt2ical(DateTime->from_epoch(epoch => $epoch));
 
     $vevent->add_properties(
-	summary => Encode::decode_utf8($fields[12] || ''),
-	description => Encode::decode_utf8($fields[13] || $fields[12] || ''),
+	summary => decode_utf8($fields[12] || ''),
+	description => decode_utf8($fields[13] || $fields[12] || ''),
 	dtstamp => $dtstamp,
 	created => $created
     );
@@ -111,7 +116,15 @@ $vtimezone->add_entry($standard);
 
 $vcalendar->add_entry($vtimezone);
 
-print Encode::encode_utf8($vcalendar->as_string);
+print $ENCODE_NCR ?
+    encode_ncr($vcalendar->as_string) :
+    encode_utf8($vcalendar->as_string);
+
+sub encode_ncr {
+    my $text = shift;
+    $text =~ s/(\P{ASCII})/sprintf("&#%d;", ord($1))/eg;
+    $text;
+}
 
 sub cydate2dt {
     my($date, $time, $tz) = @_;
