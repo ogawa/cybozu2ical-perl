@@ -18,14 +18,12 @@ use Pod::Usage;
 use Getopt::Long;
 
 our $VERSION = '0.05';
-our $ENCODE_NCR = 0;
 
 my %opt = (conf => 'config.yaml');
 GetOptions(\%opt, 'help', 'conf=s') or pod2usage(2);
 pod2usage(1) if $opt{help};
 
 my $cfg = YAML::LoadFile($opt{conf});
-my $tz = DateTime::TimeZone->new(name => $cfg->{time_zone} || 'Asia/Tokyo');
 
 my $ua = LWP::UserAgent->new();
 
@@ -45,13 +43,16 @@ my $content = $res->content;
 from_to($content, $cfg->{input_encoding} || 'shiftjis', 'utf8');
 my @lines = grep /^\d+,ts\.\d+,/, split(/\r?\n/, $content);
 
+my $tzid = $cfg->{time_zone} || 'Asia/Tokyo';
+my $tz = DateTime::TimeZone->new(name => $tzid);
+
 my $vcalendar = Data::ICal->new();
 $vcalendar->add_properties(
     prodid => "-//as-is.net/Cybozu2ICal $VERSION//EN",
     calscale => 'GREGORIAN',
     method => 'PUBLISH',
     $cfg->{calname} ? ('X-WR-CALNAME' => $cfg->{calname}) : (),
-    $cfg->{time_zone} ? ('X-WR-TIMEZONE' => $cfg->{time_zone}) : (),
+    'X-WR-TIMEZONE' => $tzid
 );
 
 # current timestamp
@@ -81,7 +82,10 @@ for my $line (@lines) {
 	    $dtend = ($fields[6] =~ /^:$/) ?
 		$dt0->add(minutes => 10) : dt2ical($dt1);
 	}
-	$vevent->add_properties(dtstart => $dtstart, dtend => $dtend);
+	$vevent->add_properties(
+	    dtstart => [$dtstart, { TZID => $tzid }],
+	    dtend => [$dtend, { TZID => $tzid }]
+	);
     }
 
     my($epoch) = $fields[1] =~ m/ts\.(\d+)/;
@@ -98,7 +102,7 @@ for my $line (@lines) {
 }
 
 my $vtimezone = Data::ICal::Entry::TimeZone->new();
-$vtimezone->add_properties(tzid => $tz->name);
+$vtimezone->add_properties(tzid => $tzid);
 
 # probably we need to support the Daylight Saving Time
 my $standard = Data::ICal::Entry::TimeZone::Standard->new();
@@ -118,7 +122,7 @@ $vtimezone->add_entry($standard);
 $vcalendar->add_entry($vtimezone);
 
 my $enc = $cfg->{output_encoding} || 'utf8';
-print ($enc eq 'ncr') ?
+print $enc eq 'ncr' ?
     encode_ncr($vcalendar->as_string) :
     encode($enc, $vcalendar->as_string);
 
