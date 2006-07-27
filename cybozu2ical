@@ -6,7 +6,7 @@
 use strict;
 use YAML;
 use LWP::UserAgent;
-use Encode qw/from_to decode_utf8 encode_utf8/;
+use Encode qw/from_to decode_utf8 encode/;
 use Text::CSV_XS;
 use Data::ICal;
 use Data::ICal::Entry::Event;
@@ -17,7 +17,7 @@ use DateTime::TimeZone;
 use Pod::Usage;
 use Getopt::Long;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 our $ENCODE_NCR = 0;
 
 my %opt = (conf => 'config.yaml');
@@ -42,7 +42,7 @@ die "Cannot access Cybozu Office 6 (" . $cfg->{cybozu_url} . ")."
     unless $res->is_success;
 
 my $content = $res->content;
-from_to($content, 'shiftjis', 'utf8');
+from_to($content, $cfg->{input_encoding} || 'shiftjis', 'utf8');
 my @lines = grep /^\d+,ts\.\d+,/, split(/\r?\n/, $content);
 
 my $vcalendar = Data::ICal->new();
@@ -116,9 +116,10 @@ $vtimezone->add_entry($standard);
 
 $vcalendar->add_entry($vtimezone);
 
-print $ENCODE_NCR ?
+my $enc = $cfg->{output_encoding} || 'utf8';
+print ($enc eq 'ncr') ?
     encode_ncr($vcalendar->as_string) :
-    encode_utf8($vcalendar->as_string);
+    encode($enc, $vcalendar->as_string);
 
 sub encode_ncr {
     my $text = shift;
