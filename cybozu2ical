@@ -51,6 +51,7 @@ $vcalendar->add_properties(
     calscale => 'GREGORIAN',
     method => 'PUBLISH',
     $cfg->{calname} ? ('X-WR-CALNAME' => $cfg->{calname}) : (),
+    $cfg->{time_zone} ? ('X-WR-TIMEZONE' => $cfg->{time_zone}) : (),
 );
 
 # current timestamp
@@ -226,11 +227,11 @@ Set the short timezone name of your Cybozu Office 6 (e.g., JST).
 The development version is always available from the following
 subversion repository:
 
-  svn://svn.as-is.net/public/cybozu2ical/trunk
+  http://code.as-is.net/svn/public/cybozu2ical/trunk
 
 You can browse the files via SVN::Web from the following:
 
-  http://svn.as-is.net/svnweb/public/browse/cybozu2ical/trunk/
+  http://code.as-is.net/viewvc/public/cybozu2ical/trunk/
 
 Any comments, suggestions, or patches are welcome.
 
