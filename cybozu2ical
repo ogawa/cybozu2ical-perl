@@ -17,7 +17,7 @@ use DateTime::TimeZone;
 use Pod::Usage;
 use Getopt::Long;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 my %opt = (conf => 'config.yaml');
 GetOptions(\%opt, 'help', 'conf=s') or pod2usage(2);
@@ -30,8 +30,9 @@ my $ua = LWP::UserAgent->new();
 my $res = $ua->post($cfg->{cybozu_url} . '?page=SyncCalendar', {
     _System => 'login',
     _Login => '1',
-    _Account => $cfg->{username},
-    Password => $cfg->{password},
+    defined $cfg->{username} ? (_Account => $cfg->{username}): (),
+    defined $cfg->{userid} ? (_Id => $cfg->{userid}): (),
+    Password => $cfg->{password} || '',
     'csv' => 1,
     'notimecard' => 1,
 });
@@ -212,9 +213,13 @@ configure C<cybozu2ical>.
 
 Set the URL of your Cybozu Office 6.
 
-=item username, password
+=item username, userid
 
-Set your username and password for Cybozu Office 6.
+Set your username or userid for Cybozu Office 6.
+
+=item password
+
+Set your password for Cybozu Office 6.
 
 =item time_zone
 

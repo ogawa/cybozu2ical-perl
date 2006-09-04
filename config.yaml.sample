@@ -1,6 +1,7 @@
 cybozu_url: http://www.example.com/cbag/ag.cgi
 calname: Your Calendar Name
 username: user
+#userid: XX
 password: pass
 time_zone: Asia/Tokyo
 tzname: JST
