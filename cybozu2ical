@@ -30,8 +30,8 @@ my $ua = LWP::UserAgent->new();
 my $res = $ua->post($cfg->{cybozu_url} . '?page=SyncCalendar', {
     _System => 'login',
     _Login => '1',
-    defined $cfg->{username} ? (_Account => $cfg->{username}): (),
-    defined $cfg->{userid} ? (_Id => $cfg->{userid}): (),
+    defined $cfg->{username} ? (_Account => $cfg->{username}) : (),
+    defined $cfg->{userid} ? (_Id => $cfg->{userid}) : (),
     Password => $cfg->{password} || '',
     'csv' => 1,
     'notimecard' => 1,
