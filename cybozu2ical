@@ -93,8 +93,8 @@ for my $line (@lines) {
     my $created = dt2ical(DateTime->from_epoch(epoch => $epoch));
 
     $vevent->add_properties(
-	summary => decode_utf8($fields[12] || ''),
-	description => decode_utf8($fields[13] || $fields[12] || ''),
+	summary => decode_utf8($fields[12] || $fields[11] || ''),
+	description => decode_utf8($fields[13] || $fields[12] || $fields[11] || ''),
 	dtstamp => $dtstamp,
 	created => $created
     );
