@@ -17,7 +17,7 @@ use DateTime::TimeZone;
 use Pod::Usage;
 use Getopt::Long;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 my %opt = (conf => 'config.yaml');
 GetOptions(\%opt, 'help', 'conf=s') or pod2usage(2);
@@ -80,8 +80,8 @@ for my $line (@lines) {
 	    $dtend = $dt1->add(days => 1)->ymd('');
 	} else {
 	    $dtstart = dt2ical($dt0);
-	    $dtend = ($fields[6] =~ /^:$/) ?
-		$dt0->add(minutes => 10) : dt2ical($dt1);
+	    $dtend = dt2ical(($fields[6] =~ /^:$/) ?
+			     $dt0->add(minutes => 10) : $dt1);
 	}
 	$vevent->add_properties(
 	    dtstart => [$dtstart, { TZID => $tzid }],
@@ -92,9 +92,12 @@ for my $line (@lines) {
     my($epoch) = $fields[1] =~ m/ts\.(\d+)/;
     my $created = dt2ical(DateTime->from_epoch(epoch => $epoch));
 
+    my $summary = $fields[11] || '';
+    $summary .= ': ' if $summary;
+    $summary .= $fields[12] || '';
     $vevent->add_properties(
-	summary => decode_utf8($fields[12] || $fields[11] || ''),
-	description => decode_utf8($fields[13] || $fields[12] || $fields[11] || ''),
+	summary => decode_utf8($summary),
+	description => decode_utf8($fields[13] || $summary),
 	dtstamp => $dtstamp,
 	created => $created
     );
