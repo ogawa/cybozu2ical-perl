@@ -4,20 +4,20 @@
 # $Id$
 
 use strict;
+use lib 'lib';
+
 use YAML;
-use LWP::UserAgent;
-use Encode qw/from_to decode_utf8 encode/;
-use Text::CSV_XS;
+use Encode qw/decode_utf8 encode/;
+use WWW::CybozuOffice6::Calendar;
 use Data::ICal;
 use Data::ICal::Entry::Event;
 use Data::ICal::Entry::TimeZone;
 use Data::ICal::Entry::TimeZone::Standard;
 use DateTime;
-use DateTime::TimeZone;
 use Pod::Usage;
 use Getopt::Long;
 
-our $VERSION = '0.07';
+our $VERSION = '0.10';
 
 my %opt = (conf => 'config.yaml');
 GetOptions(\%opt, 'help', 'conf=s') or pod2usage(2);
@@ -25,136 +25,93 @@ pod2usage(1) if $opt{help};
 
 my $cfg = YAML::LoadFile($opt{conf});
 
-my $ua = LWP::UserAgent->new();
-
-my $res = $ua->post($cfg->{cybozu_url} . '?page=SyncCalendar', {
-    _System => 'login',
-    _Login => '1',
-    defined $cfg->{username} ? (_Account => $cfg->{username}) : (),
-    defined $cfg->{userid} ? (_Id => $cfg->{userid}) : (),
-    Password => $cfg->{password} || '',
-    'csv' => 1,
-    'notimecard' => 1,
-});
-
-die "Cannot access Cybozu Office 6 (" . $cfg->{cybozu_url} . ")."
-    unless $res->is_success;
-
-my $content = $res->content;
-from_to($content, $cfg->{input_encoding} || 'shiftjis', 'utf8');
-my @lines = grep /^\d+,ts\.\d+,/, split(/\r?\n/, $content);
-
-my $tzid = $cfg->{time_zone} || 'Asia/Tokyo';
-my $tz = DateTime::TimeZone->new(name => $tzid);
+my $time_zone = $cfg->{time_zone} || 'Asia/Tokyo';
 
 my $vcalendar = Data::ICal->new();
 $vcalendar->add_properties(
-    prodid => "-//as-is.net/Cybozu2ICal $VERSION//EN",
+    prodid   => "-//as-is.net/Cybozu2ICal $VERSION//EN",
     calscale => 'GREGORIAN',
-    method => 'PUBLISH',
+    method   => 'PUBLISH',
     $cfg->{calname} ? ('X-WR-CALNAME' => $cfg->{calname}) : (),
-    'X-WR-TIMEZONE' => $tzid
+    'X-WR-TIMEZONE' => $time_zone
 );
 
-# current timestamp
-my $dtstamp = dt2ical(DateTime->now);
-
-my $csv = Text::CSV_XS->new({ binary => 1 });
-for my $line (@lines) {
-    $csv->parse($line)
-	or die 'failed to parse CSV input.';
-    my @fields = $csv->fields;
-    next if $#fields < 13; # num. of fields
-
+my $cal = WWW::CybozuOffice6::Calendar->new(%$cfg);
+for my $item ($cal->get_items()) {
     my $vevent = Data::ICal::Entry::Event->new();
-
-    if (my $freq = $fields[7]) {
-	# TODO: handle recurrent events
-	warn "Recurrent events[$freq] cannot be handled.";
-    } else {
-	my ($dtstart, $dtend);
-	my $dt0 = cydate2dt($fields[3], $fields[5], $tz);
-	my $dt1 = cydate2dt($fields[4], $fields[6], $tz);
-	if ($fields[5] =~ /^:$/) {
-	    $dtstart = $dt0->ymd('');
-	    $dtend = $dt1->add(days => 1)->ymd('');
-	} else {
-	    $dtstart = dt2ical($dt0);
-	    $dtend = dt2ical(($fields[6] =~ /^:$/) ?
-			     $dt0->add(minutes => 10) : $dt1);
-	}
-	$vevent->add_properties(
-	    dtstart => [$dtstart, { TZID => $tzid }],
-	    dtend => [$dtend, { TZID => $tzid }]
-	);
-    }
-
-    my($epoch) = $fields[1] =~ m/ts\.(\d+)/;
-    my $created = dt2ical(DateTime->from_epoch(epoch => $epoch));
-
-    my $summary = $fields[11] || '';
-    $summary .= ': ' if $summary;
-    $summary .= $fields[12] || '';
-    $vevent->add_properties(
-	summary => decode_utf8($summary),
-	description => decode_utf8($fields[13] || $summary),
-	dtstamp => $dtstamp,
-	created => $created
+    my %args = (
+	summary     => decode_utf8($item->{summary}),
+	description => decode_utf8($item->{description}),
+	created     => to_icaldate($item->{created}),
+	dtstamp     => to_icaldate($item->{modified})
     );
 
+    if ($item->{is_full_day}) {
+	$args{dtstart} = [to_icaldate($item->{start}, 1), { VALUE => 'DATE' }];
+	$args{dtend}   = [to_icaldate($item->{end},   1), { VALUE => 'DATE' }];
+    } else {
+	$args{dtstart} = [to_icaldate($item->{start}, 0), { TZID => $time_zone }];
+	$args{dtend}   = [to_icaldate($item->{end},   0), { TZID => $time_zone }];
+    }
+
+    # handle frequency
+    if ($item->{frequency}) {
+	my $freq = $item->{frequency};
+	my %rrules = $freq ne 'WEEKDAYS' ?
+	    ( FREQ => $freq ) :
+	    ( FREQ => 'WEEKLY', WKST => 'SU', BYDAY => 'MO,TU,WE,TH,FR' );
+	$rrules{UNTIL} = to_icaldate($item->{until}, 1) if $item->{until};
+	$args{rrule} = join ';', map { $_ . '=' . $rrules{$_} } keys %rrules;
+    }
+
+    $vevent->add_properties(%args);
     $vcalendar->add_entry($vevent);
 }
 
 my $vtimezone = Data::ICal::Entry::TimeZone->new();
-$vtimezone->add_properties(tzid => $tzid);
+$vtimezone->add_properties(tzid => $time_zone);
 
 # probably we need to support the Daylight Saving Time
 my $standard = Data::ICal::Entry::TimeZone::Standard->new();
 
-my $dt = cydate2dt("1970/01/01", "00:00:00", $tz);
-my $offset = DateTime::TimeZone::offset_as_string($dt->offset) || '+0900';
-my $tzname = $cfg->{tzname} || $tz->short_name_for_datetime($dt) || 'JST';
+my $std = DateTime->new(year => 1970, month => 1, day => 1,
+			hour => 0, minute => 0, second => 0,
+			time_zone => $time_zone);
+my $offset = DateTime::TimeZone::offset_as_string($std->offset) || '+0900';
+my $tzname = $cfg->{tzname} || 'JST';
 
 $standard->add_properties(
     tzoffsetfrom => $offset,
-    tzoffsetto => $offset,
-    tzname => $tzname,
-    dtstart => dt2ical($dt)
+    tzoffsetto   => $offset,
+    tzname       => $tzname,
+    dtstart      => to_icaldate($std)
 );
 $vtimezone->add_entry($standard);
 
 $vcalendar->add_entry($vtimezone);
 
-my $enc = $cfg->{output_encoding} || 'utf8';
-print $enc eq 'ncr' ?
-    encode_ncr($vcalendar->as_string) :
-    encode($enc, $vcalendar->as_string);
+print encode_($cfg->{output_encoding} || 'utf8', $vcalendar->as_string);
 
-sub encode_ncr {
-    my $text = shift;
-    $text =~ s/(\P{ASCII})/sprintf("&#%d;", ord($1))/eg;
+sub to_icaldate {
+    my($dt, $is_full_day) = @_;
+    $is_full_day ?
+	$dt->ymd('') :
+	$dt->ymd('') . 'T' . $dt->hms('') . ($dt->time_zone->is_utc ? 'Z' : '');
+}
+
+sub encode_ {
+    my($enc, $text) = @_;
+    if ($enc eq 'ncr') {
+	$text =~ s/(\P{ASCII})/sprintf("&#%d;", ord($1))/eg;
+    } else {
+	$text = encode($enc, $text);
+    }
     $text;
 }
 
-sub cydate2dt {
-    my($date, $time, $tz) = @_;
-    my @d = split("/", $date);
-    my @t = split(":", $time);
-
-    my $dt = DateTime->new(
-	year => $d[0], month => $d[1], day => $d[2],
-	hour => $t[0] || 0, minute => $t[1] || 0, second => $t[2] || 0,
-	time_zone => $tz || 'Asia/Tokyo'
-    );
-    return $dt;
-}
-
-sub dt2ical {
-    my($dt) = @_;
-    $dt->ymd('') . 'T' . $dt->hms('') . ($dt->time_zone->is_utc ? 'Z' : '');
-}
-
 1;
+__END__
+
 =head1 NAME
 
 cybozu2ical - Convert Cybozu Office 6 calendar into iCal format
@@ -180,6 +137,8 @@ This application requires perl 5.8.0 with following Perl modules
 installed on your box.
 
 =over 4
+
+=item WWW::CybozuOffice6::Calendar
 
 =item Text::CSV_XS
 
@@ -239,7 +198,7 @@ Set the short timezone name of your Cybozu Office 6 (e.g., JST).
 The development version is always available from the following
 subversion repository:
 
-  http://code.as-is.net/svn/public/cybozu2ical/trunk
+  http://code.as-is.net/svn/public/cybozu2ical/trunk/
 
 You can browse the files via SVN::Web from the following:
 
