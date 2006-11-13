@@ -81,16 +81,17 @@ sub _parse_general_event {
 
     my $start = $this->to_datetime($fields[3], $fields[5]);
     my $end   = $this->to_datetime($fields[4], $fields[6]);
-    if ($fields[5] =~ /^:$/) {		# full-day event
+    return unless $start && $end;
+    if ($fields[5] eq ':') {		# full-day event
 	$start = $start->truncate(to => 'day');
 	$end   = $end->add(days => 1)->truncate(to => 'day');
 	$is_full_day = 1;
-    } elsif ($fields[6] =~ /^:$/) {	# event w/o endtime
-	$end   = $start->add(minutes => 10);
+    } elsif ($fields[6] eq ':') {	# event w/o endtime
+	$end   = $start->clone->add(minutes => 10);
     }
 
-    my($created) = $fields[1] =~ m/ts\.(\d+)/;
-    $created = DateTime->from_epoch(epoch => $created);
+    my($created) = $fields[1] =~ m/^ts\.(\d+)$/;
+    $created = DateTime->from_epoch(epoch => $created || 0);
 
     my $summary = $fields[11] || '';
     $summary .= ': ' if $summary;
@@ -125,8 +126,8 @@ sub _parse_recurrent_event {
     if (exists $FREQUENCY{$freq}) {
 	$item->{frequency} = $FREQUENCY{$freq};
 	$item->{frequency_value} = $fields[8] || 0;
-	$item->{until} = $this->to_datetime($fields[4], '0:0:0')
-	    unless $fields[4] =~ m!^//$!;
+	$item->{until} = $this->to_datetime($fields[4])
+	    if $fields[4] ne '//';
     }
 
     $item;
@@ -134,13 +135,20 @@ sub _parse_recurrent_event {
 
 sub to_datetime {
     my $this = shift;
-    my @d = split '/', $_[0] || '';
-    my @t = split ':', $_[1] || '';
-    DateTime->new(
-	year => $d[0], month => $d[1], day => $d[2],
-	hour => $t[0] || 0, minute => $t[1] || 0, second => $t[2] || 0,
-	time_zone => $this->{time_zone} || 'Asia/Tokyo',
-    );
+    my($ymd, $hms) = @_;
+
+    my %args;
+    return unless $ymd && $ymd =~ m!^(\d+)/(\d+)/(\d+)$!;
+    @args{qw(year month day)} = ($1, $2, $3);
+
+    $hms = '0:0:0' unless $hms && $hms ne ':';
+    return unless $hms =~ m!^(\d+):(\d+)(?:\:?(\d+)?)$!;
+    @args{qw(hour minute second)} = ($1, $2, $3 || 0);
+    @args{qw(hour minute second)} = (23, 59, 59) if $args{hour} > 23;
+
+    $args{time_zone} = $this->{time_zone} || 'Asia/Tokyo';
+
+    DateTime->new(%args);
 }
 
 1;
