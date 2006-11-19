@@ -141,10 +141,13 @@ sub to_datetime {
     return unless $ymd && $ymd =~ m!^(\d+)/(\d+)/(\d+)$!;
     @args{qw(year month day)} = ($1, $2, $3);
 
-    $hms = '0:0:0' unless $hms && $hms ne ':';
-    return unless $hms =~ m!^(\d+):(\d+)(?:\:?(\d+)?)$!;
-    @args{qw(hour minute second)} = ($1, $2, $3 || 0);
-    @args{qw(hour minute second)} = (23, 59, 59) if $args{hour} > 23;
+    if ($hms && $hms ne ':') {
+	return unless $hms =~ m!^(\d+):(\d+)(?:\:?(\d+)?)$!;
+	@args{qw(hour minute second)} = ($1, $2, $3 || 0);
+	@args{qw(hour minute second)} = (23, 59, 59) if $args{hour} > 23;
+    } else {
+	@args{qw(hour minute second)} = (0, 0, 0);
+    }
 
     $args{time_zone} = $this->{time_zone} || 'Asia/Tokyo';
 
