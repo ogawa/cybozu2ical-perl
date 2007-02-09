@@ -200,9 +200,9 @@ subversion repository:
 
   http://code.as-is.net/svn/public/cybozu2ical/trunk/
 
-You can browse the files via SVN::Web from the following:
+You can browse the files via Trac from the following:
 
-  http://code.as-is.net/viewvc/public/cybozu2ical/trunk/
+  http://code.as-is.net/trac/browser/cybozu2ical/trunk/
 
 Any comments, suggestions, or patches are welcome.
 
