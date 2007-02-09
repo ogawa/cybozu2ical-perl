@@ -316,9 +316,9 @@ subversion repository:
 
   http://code.as-is.net/svn/public/WWW-CybozuOffice6-Calendar/trunk/
 
-You can browse the files via ViewVC from the following:
+You can browse the files via Trac from the following:
 
-  http://code.as-is.net/viewvc/public/WWW-CybozuOffice6-Calendar/trunk/
+  http://code.as-is.net/trac/browser/WWW-CybozuOffice6-Calendar/trunk/
 
 Any comments, suggestions, or patches are welcome.
 
