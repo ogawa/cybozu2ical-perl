@@ -318,7 +318,7 @@ subversion repository:
 
 You can browse the files via Trac from the following:
 
-  http://code.as-is.net/trac/browser/WWW-CybozuOffice6-Calendar/trunk/
+  http://code.as-is.net/public/browser/WWW-CybozuOffice6-Calendar/trunk/
 
 Any comments, suggestions, or patches are welcome.
 
