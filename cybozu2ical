@@ -60,7 +60,7 @@ for my $item ($cal->get_items()) {
 	my %rrules = $freq ne 'WEEKDAYS' ?
 	    ( FREQ => $freq ) :
 	    ( FREQ => 'WEEKLY', WKST => 'SU', BYDAY => 'MO,TU,WE,TH,FR' );
-	$rrules{UNTIL} = to_icaldate($item->{until}, 1) if $item->{until};
+	$rrules{UNTIL} = to_icaldate($item->{until}) if $item->{until};
 	$args{rrule} = join ';', map { $_ . '=' . $rrules{$_} } keys %rrules;
     }
 

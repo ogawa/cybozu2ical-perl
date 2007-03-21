@@ -126,8 +126,11 @@ sub _parse_recurrent_event {
     if (exists $FREQUENCY{$freq}) {
 	$item->{frequency} = $FREQUENCY{$freq};
 	$item->{frequency_value} = $fields[8] || 0;
-	$item->{until} = $this->to_datetime($fields[4])
-	    if $fields[4] ne '//';
+	if ($fields[4] =~ m!^(\d+)/(\d+)/(\d+)$!) {
+	    my $until = $item->{end}->clone->set(year => $1, month => $2, day => $3);
+	    $until->set_time_zone('UTC');
+	    $item->{until} = $until;
+	}
     }
 
     $item;
