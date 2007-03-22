@@ -58,7 +58,7 @@ for my $item ($cal->get_items()) {
     if ($item->{frequency}) {
 	my $freq = $item->{frequency};
 	my %rrules = $freq ne 'WEEKDAYS' ?
-	    ( FREQ => $freq ) :
+	    ( FREQ => $freq, WKST => 'SU' ) :
 	    ( FREQ => 'WEEKLY', WKST => 'SU', BYDAY => 'MO,TU,WE,TH,FR' );
 	$rrules{UNTIL} = to_icaldate($item->{until}, $item->{is_full_day})
 	    if $item->{until};
