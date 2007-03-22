@@ -20,7 +20,7 @@ use Getopt::Long;
 our $VERSION = '0.12';
 
 my %opt = (conf => 'config.yaml');
-GetOptions(\%opt, 'help', 'conf=s') or pod2usage(2);
+GetOptions(\%opt, 'help', 'debug', 'conf=s') or pod2usage(2);
 pod2usage(1) if $opt{help};
 
 my $cfg = YAML::LoadFile($opt{conf});
@@ -43,8 +43,11 @@ for my $item ($cal->get_items()) {
 	summary     => decode_utf8($item->{summary}),
 	description => decode_utf8($item->{description}),
 	created     => to_icaldate($item->{created}),
-	dtstamp     => to_icaldate($item->{modified})
+	dtstamp     => to_icaldate($item->{modified}),
     );
+
+    $args{comment} = decode_utf8($item->{debug_info})
+	if $opt{debug} && $item->{debug_info};
 
     if ($item->{is_full_day}) {
 	$args{dtstart} = [to_icaldate($item->{start}, 1), { VALUE => 'DATE' }];

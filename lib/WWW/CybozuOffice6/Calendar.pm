@@ -53,6 +53,7 @@ sub get_items {
 	my $item = $fields[7] ?
 	    $this->_parse_recurrent_event(@fields) :
 	    $this->_parse_general_event(@fields);
+	$item->{debug_info} = $line; # save the CSV line as for debug info.
 	push @items, $item if $item;
     }
     wantarray ? @items : $items[0];
