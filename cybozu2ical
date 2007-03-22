@@ -17,7 +17,7 @@ use DateTime;
 use Pod::Usage;
 use Getopt::Long;
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 my %opt = (conf => 'config.yaml');
 GetOptions(\%opt, 'help', 'conf=s') or pod2usage(2);
@@ -60,7 +60,8 @@ for my $item ($cal->get_items()) {
 	my %rrules = $freq ne 'WEEKDAYS' ?
 	    ( FREQ => $freq ) :
 	    ( FREQ => 'WEEKLY', WKST => 'SU', BYDAY => 'MO,TU,WE,TH,FR' );
-	$rrules{UNTIL} = to_icaldate($item->{until}) if $item->{until};
+	$rrules{UNTIL} = to_icaldate($item->{until}, $item->{is_full_day})
+	    if $item->{until};
 	$args{rrule} = join ';', map { $_ . '=' . $rrules{$_} } keys %rrules;
     }
 

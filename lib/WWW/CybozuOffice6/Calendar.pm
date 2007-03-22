@@ -9,7 +9,7 @@ use LWP::UserAgent;
 use DateTime;
 use Text::CSV_XS;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 sub new {
     my($class, %param) = @_;
@@ -109,6 +109,8 @@ sub _parse_general_event {
 }
 
 # handle recurrent events
+our %FREQUENCY = ( y => 'YEARLY', m => 'MONTHLY', w => 'WEEKLY',
+		   d => 'DAILY', n => 'WEEKDAYS' );
 sub _parse_recurrent_event {
     my $this = shift;
     my @fields = @_;
@@ -120,15 +122,19 @@ sub _parse_recurrent_event {
     my $item = $this->_parse_general_event(@f);
 
     # frequency
-    my %FREQUENCY = ( y => 'YEARLY', m => 'MONTHLY', w => 'WEEKLY',
-		      d => 'DAILY', n => 'WEEKDAYS' );
     my $freq = $fields[7];
-    if (exists $FREQUENCY{$freq}) {
+    if ($freq && exists $FREQUENCY{$freq}) {
 	$item->{frequency} = $FREQUENCY{$freq};
 	$item->{frequency_value} = $fields[8] || 0;
 	if ($fields[4] =~ m!^(\d+)/(\d+)/(\d+)$!) {
-	    my $until = $item->{end}->clone->set(year => $1, month => $2, day => $3);
-	    $until->set_time_zone('UTC');
+	    my %args = (year => $1, month => $2, day => $3);
+	    my $until;
+	    if ($item->{is_full_day}) {
+		$until = $this->to_datetime($fields[4], ':');
+	    } else {
+		$until = $item->{end}->clone->set(%args);
+		$until->set_time_zone('UTC'); # timezone must be UTC
+	    }
 	    $item->{until} = $until;
 	}
     }
