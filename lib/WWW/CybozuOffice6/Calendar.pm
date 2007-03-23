@@ -50,11 +50,40 @@ sub get_items {
 	my @fields = $csv->fields;
 	next if $#fields < 13; # num. of fields
 
-	my $item = $fields[7] ?
-	    $this->_parse_recurrent_event(@fields) :
-	    $this->_parse_general_event(@fields);
-	$item->{debug_info} = $line; # save the CSV line as for debug info.
-	push @items, $item if $item;
+	# Cybozu Calendar CSV Format
+	#      GENERIC     | RECCURENT
+	# [ 0] id?         | id?
+	# [ 1] created     | created
+	# [ 2] <BLANK>     x start_date
+	# [ 3] start_date  x end_date
+	# [ 4] end_date    x until_date
+	# [ 5] start_time  | start_time
+	# [ 6] end_time    | end_time
+	# [ 7] <BLANK>     | freq
+	# [ 8] <BLANK>     | freq_value
+	# [ 9] ???         | ???
+	# [10] ???         | ???
+	# [11] abbrev      | abbrev
+	# [12] summary     | summary
+	# [13] description | description
+
+	my %param;
+	@param{qw(created start_time end_time freq freq_value abbrev summary description)} = @fields[1,5..8,11..13];
+	$param{created} =~ s/^ts\.//;
+	$param{time_zone} = $this->{time_zone} || 'Asia/Tokyo';
+
+	my $item;
+	if (!$param{freq}) {
+	    @param{qw(start_date end_date)} = @fields[3,4];
+	    $item = WWW::CybozuOffice6::Calendar::Event->new(%param);
+	} else {
+	    @param{qw(start_date end_date until_date)} = @fields[2..4];
+	    $item = WWW::CybozuOffice6::Calendar::RecurentEvent->new(%param);
+	}
+
+	next unless $item;
+	$item->comment($line); # save the CSV line as for debug info.
+	push @items, $item;
     }
     wantarray ? @items : $items[0];
 }
@@ -72,77 +101,64 @@ sub _request {
     });
 }
 
-# handle non-recurrent events
-sub _parse_general_event {
+package WWW::CybozuOffice6::Calendar::Event;
+
+sub new {
+    my $class = shift;
+    my $self = {
+	is_full_day => 0,
+	modified => DateTime->now,
+    };
+    bless $self, $class;
+    return unless $self->parse(@_);
+    $self;
+}
+
+sub start	{ shift->_accessor('start',		@_) }
+sub end		{ shift->_accessor('end',		@_) }
+sub summary	{ shift->_accessor('summary',		@_) }
+sub description	{ shift->_accessor('description',	@_) }
+sub created	{ shift->_accessor('created',		@_) }
+sub modified	{ shift->_accessor('modified',		@_) }
+sub is_full_day	{ shift->_accessor('is_full_day',	@_) }
+sub comment	{ shift->_accessor('comment',		@_) }
+sub _accessor {
     my $this = shift;
-    my @fields = @_;
+    my $key = shift;
+    $this->{$key} = shift if @_;
+    $this->{$key};
+}
 
-    my $now = DateTime->now;
-    my $is_full_day = 0;
+sub parse {
+    my($this, %param) = @_;
 
-    my $start = $this->to_datetime($fields[3], $fields[5]);
-    my $end   = $this->to_datetime($fields[4], $fields[6]);
+    $this->{time_zone} = $param{time_zone} || 'Asia/Tokyo';
+
+    my $start = $this->to_datetime($param{start_date}, $param{start_time});
+    my $end   = $this->to_datetime($param{end_date},   $param{end_time});
     return unless $start && $end;
-    if ($fields[5] eq ':') {		# full-day event
+
+    # (start_time == empty) => A full-day event
+    # (start_time != empty) && (end_time == empty) => A malformed event
+    if ($param{start_time} eq ':') {
 	$start = $start->truncate(to => 'day');
 	$end   = $end->add(days => 1)->truncate(to => 'day');
-	$is_full_day = 1;
-    } elsif ($fields[6] eq ':') {	# event w/o endtime
+	$this->{is_full_day} = 1;
+    } elsif ($param{end_time} eq ':') {
 	$end   = $start->clone->add(minutes => 10);
     }
+    $this->{start} = $start;
+    $this->{end}   = $end;
 
-    my($created) = $fields[1] =~ m/^ts\.(\d+)$/;
-    $created = DateTime->from_epoch(epoch => $created || 0);
+    $this->{created} = DateTime->from_epoch(epoch => $param{created} || 0);
 
-    my $summary = $fields[11] || '';
-    $summary .= ': ' if $summary;
-    $summary .= $fields[12] || '';
-
-    my $item = {
-	start       => $start,
-	end         => $end,
-	is_full_day => $is_full_day,
-	summary     => $summary,
-	description => $fields[13] || $summary,
-	created     => $created,
-	modified    => $now,
-    };
+    my $summary = ($param{abbrev} ? $param{abbrev} . ': ' : '') . $param{summary};
+    $this->{summary} = $summary;
+    $this->{description} = $param{description} || $summary;
+    1;
 }
 
-# handle recurrent events
-our %FREQUENCY = ( y => 'YEARLY', m => 'MONTHLY', w => 'WEEKLY',
-		   d => 'DAILY', n => 'WEEKDAYS' );
-sub _parse_recurrent_event {
-    my $this = shift;
-    my @fields = @_;
-
-    # arrange for _parse_general_event
-    my @f = @fields;
-    $f[4] = $f[3];
-    $f[3] = $f[2];
-    my $item = $this->_parse_general_event(@f);
-
-    # frequency
-    my $freq = $fields[7];
-    if ($freq && exists $FREQUENCY{$freq}) {
-	$item->{frequency} = $FREQUENCY{$freq};
-	$item->{frequency_value} = $fields[8] || 0;
-	if ($fields[4] =~ m!^(\d+)/(\d+)/(\d+)$!) {
-	    my %args = (year => $1, month => $2, day => $3);
-	    my $until;
-	    if ($item->{is_full_day}) {
-		$until = $this->to_datetime($fields[4], ':');
-	    } else {
-		$until = $item->{end}->clone->set(%args);
-		$until->set_time_zone('UTC'); # timezone must be UTC
-	    }
-	    $item->{until} = $until;
-	}
-    }
-
-    $item;
-}
-
+# convert (ymd, hms) pair to a DateTime object (timezone: localtime)
 sub to_datetime {
     my $this = shift;
     my($ymd, $hms) = @_;
@@ -159,9 +175,43 @@ sub to_datetime {
 	@args{qw(hour minute second)} = (0, 0, 0);
     }
 
-    $args{time_zone} = $this->{time_zone} || 'Asia/Tokyo';
+    $args{time_zone} = $this->{time_zone};
 
     DateTime->new(%args);
+}
+
+package WWW::CybozuOffice6::Calendar::RecurrentEvent;
+
+@WWW::CybozuOffice6::Calendar::RecurrentEvent::ISA = qw( WWW::CybozuOffice6::Calendar::Event );
+
+sub frequency		{ shift->_accessor('frequency',		@_) }
+sub frequency_value	{ shift->_accessor('frequency_value',	@_) }
+
+our %FREQUENCY = ( y => 'YEARLY', m => 'MONTHLY', w => 'WEEKLY',
+		   d => 'DAILY', n => 'WEEKDAYS' );
+sub parse {
+    my($this, %param) = @_;
+    $this->SUPER::parse(%param);
+
+    # frequency
+    my $freq = $param{freq};
+    return unless $freq && exists $FREQUENCY{$freq};
+
+    $this->{frequency} = $FREQUENCY{$freq};
+    $this->{frequency_value} = $param{freq_value} || 0;
+
+    if ($param{until_date} =~ m!^(\d+)/(\d+)/(\d+)$!) {
+	my %args = (year => $1, month => $2, day => $3);
+	my $until;
+	if ($this->{is_full_day}) {
+	    $until = $this->to_datetime($param{until_date}, ':');
+	} else {
+	    $until = $this->{end}->clone->set(%args);
+	    $until->set_time_zone('UTC'); # timezone must be UTC
+	}
+	$this->{until} = $until;
+    }
+    1;
 }
 
 1;

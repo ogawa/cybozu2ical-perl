@@ -40,31 +40,31 @@ my $cal = WWW::CybozuOffice6::Calendar->new(%$cfg);
 for my $item ($cal->get_items()) {
     my $vevent = Data::ICal::Entry::Event->new();
     my %args = (
-	summary     => decode_utf8($item->{summary}),
-	description => decode_utf8($item->{description}),
-	created     => to_icaldate($item->{created}),
-	dtstamp     => to_icaldate($item->{modified}),
+	summary     => decode_utf8($item->summary),
+	description => decode_utf8($item->description),
+	created     => to_icaldate($item->created),
+	dtstamp     => to_icaldate($item->modified),
     );
 
-    $args{comment} = decode_utf8($item->{debug_info})
-	if $opt{debug} && $item->{debug_info};
+    $args{comment} = decode_utf8($item->comment)
+	if $opt{debug} && $item->comment;
 
-    if ($item->{is_full_day}) {
-	$args{dtstart} = [to_icaldate($item->{start}, 1), { VALUE => 'DATE' }];
-	$args{dtend}   = [to_icaldate($item->{end},   1), { VALUE => 'DATE' }];
+    if ($item->is_full_day) {
+	$args{dtstart} = [to_icaldate($item->start, 1), { VALUE => 'DATE' }];
+	$args{dtend}   = [to_icaldate($item->end,   1), { VALUE => 'DATE' }];
     } else {
-	$args{dtstart} = [to_icaldate($item->{start}, 0), { TZID => $time_zone }];
-	$args{dtend}   = [to_icaldate($item->{end},   0), { TZID => $time_zone }];
+	$args{dtstart} = [to_icaldate($item->start, 0), { TZID => $time_zone }];
+	$args{dtend}   = [to_icaldate($item->end,   0), { TZID => $time_zone }];
     }
 
     # handle frequency
-    if ($item->{frequency}) {
-	my $freq = $item->{frequency};
+    if ($item->can('frequency')) {
+	my $freq = $item->frequency;
 	my %rrules = $freq ne 'WEEKDAYS' ?
 	    ( FREQ => $freq, WKST => 'SU' ) :
 	    ( FREQ => 'WEEKLY', WKST => 'SU', BYDAY => 'MO,TU,WE,TH,FR' );
-	$rrules{UNTIL} = to_icaldate($item->{until}, $item->{is_full_day})
-	    if $item->{until};
+	$rrules{UNTIL} = to_icaldate($item->until, $item->is_full_day)
+	    if $item->until;
 	$args{rrule} = join ';', map { $_ . '=' . $rrules{$_} } keys %rrules;
     }
 
