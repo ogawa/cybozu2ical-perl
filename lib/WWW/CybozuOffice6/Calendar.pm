@@ -107,7 +107,7 @@ sub new {
     my $class = shift;
     my $self = {
 	is_full_day => 0,
-	modified => DateTime->now,
+#	modified => DateTime->now,
     };
     bless $self, $class;
     return unless $self->parse(@_);
@@ -151,6 +151,7 @@ sub parse {
     $this->{end}   = $end;
 
     $this->{created} = DateTime->from_epoch(epoch => $param{created} || 0);
+    $this->{modified} = DateTime->from_epoch(epoch => $param{created} || 0);
 
     my $summary = ($param{abbrev} ? $param{abbrev} . ': ' : '') . $param{summary};
     $this->{summary} = $summary;
