@@ -18,6 +18,7 @@ sub new {
     bless \%param, $class;
 }
 
+sub id			{ shift->_accessor('id',		@_) }
 sub url			{ shift->_accessor('url',		@_) }
 sub username		{ shift->_accessor('username',		@_) }
 sub userid		{ shift->_accessor('userid',		@_) }
@@ -49,6 +50,7 @@ sub get_items {
 	    or die 'Failed to parse CSV input';
 	my @fields = $csv->fields;
 	next if $#fields < 13; # num. of fields
+	$fields[1] =~ s/^ts\.//; # remove rubbish
 
 	# Cybozu Calendar CSV Format
 	#      GENERIC     | RECCURENT
@@ -68,8 +70,7 @@ sub get_items {
 	# [13] description | description
 
 	my %param;
-	@param{qw(created start_time end_time freq freq_value abbrev summary description)} = @fields[1,5..8,11..13];
-	$param{created} =~ s/^ts\.//;
+	@param{qw(id created start_time end_time freq freq_value abbrev summary description)} = @fields[0,1,5..8,11..13];
 	$param{time_zone} = $this->{time_zone} || 'Asia/Tokyo';
 
 	my $item;
