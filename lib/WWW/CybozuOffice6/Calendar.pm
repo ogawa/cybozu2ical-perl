@@ -9,16 +9,18 @@ use LWP::UserAgent;
 use DateTime;
 use Text::CSV_XS;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 sub new {
     my($class, %param) = @_;
     $param{url} ||= delete $param{cybozu_url};
+    $param{host} ||= URI->new($param{url})->host;
     $param{ua} ||= LWP::UserAgent->new();
     bless \%param, $class;
 }
 
 sub url			{ shift->_accessor('url',		@_) }
+sub host		{ shift->_accessor('host',		@_) }
 sub username		{ shift->_accessor('username',		@_) }
 sub userid		{ shift->_accessor('userid',		@_) }
 sub password		{ shift->_accessor('password',		@_) }
@@ -318,6 +320,10 @@ Obtains a list of calendar items from Cybozu Office 6. If successful,
 an array of new items is returned.  Each item has the following keys:
 
 =over 8
+
+=item id (string)
+
+A unique id.
 
 =item start (DateTime object)
 

@@ -69,7 +69,7 @@ for my $item ($cal->get_items()) {
     }
 
     # set uid (recommended to be the identical syntax to RFC822)
-    $args{uid} = $args{created} . '-' . $item->id . '@' . URI->new($cfg->{cybozu_url})->host;
+    $args{uid} = $args{created} . '-' . $item->id . '@' . $cal->host;
 
     $vevent->add_properties(%args);
     $vcalendar->add_entry($vevent);
