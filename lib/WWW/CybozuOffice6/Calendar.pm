@@ -18,7 +18,6 @@ sub new {
     bless \%param, $class;
 }
 
-sub id			{ shift->_accessor('id',		@_) }
 sub url			{ shift->_accessor('url',		@_) }
 sub username		{ shift->_accessor('username',		@_) }
 sub userid		{ shift->_accessor('userid',		@_) }
@@ -108,13 +107,14 @@ sub new {
     my $class = shift;
     my $self = {
 	is_full_day => 0,
-#	modified => DateTime->now,
+	modified => DateTime->now,
     };
     bless $self, $class;
     return unless $self->parse(@_);
     $self;
 }
 
+sub id		{ shift->_accessor('id',		@_) }
 sub start	{ shift->_accessor('start',		@_) }
 sub end		{ shift->_accessor('end',		@_) }
 sub summary	{ shift->_accessor('summary',		@_) }
@@ -133,6 +133,7 @@ sub _accessor {
 sub parse {
     my($this, %param) = @_;
 
+    $this->{id} = $param{id} || '0';
     $this->{time_zone} = $param{time_zone} || 'Asia/Tokyo';
 
     my $start = $this->to_datetime($param{start_date}, $param{start_time});
@@ -152,7 +153,6 @@ sub parse {
     $this->{end}   = $end;
 
     $this->{created} = DateTime->from_epoch(epoch => $param{created} || 0);
-    $this->{modified} = DateTime->from_epoch(epoch => $param{created} || 0);
 
     my $summary = ($param{abbrev} ? $param{abbrev} . ': ' : '') . $param{summary};
     $this->{summary} = $summary;
