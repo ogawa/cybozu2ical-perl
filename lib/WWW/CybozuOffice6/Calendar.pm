@@ -6,6 +6,7 @@ use warnings;
 
 use Encode qw/from_to/;
 use LWP::UserAgent;
+use URI;
 use DateTime;
 use Text::CSV_XS;
 
@@ -80,7 +81,7 @@ sub get_items {
 	    $item = WWW::CybozuOffice6::Calendar::Event->new(%param);
 	} else {
 	    @param{qw(start_date end_date until_date)} = @fields[2..4];
-	    $item = WWW::CybozuOffice6::Calendar::RecurentEvent->new(%param);
+	    $item = WWW::CybozuOffice6::Calendar::RecurrentEvent->new(%param);
 	}
 
 	next unless $item;
@@ -190,6 +191,7 @@ package WWW::CybozuOffice6::Calendar::RecurrentEvent;
 
 sub frequency		{ shift->_accessor('frequency',		@_) }
 sub frequency_value	{ shift->_accessor('frequency_value',	@_) }
+sub until		{ shift->_accessor('until',		@_) }
 
 our %FREQUENCY = ( y => 'YEARLY', m => 'MONTHLY', w => 'WEEKLY',
 		   d => 'DAILY', n => 'WEEKDAYS' );
