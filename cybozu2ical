@@ -19,6 +19,26 @@ use Getopt::Long;
 
 our $VERSION = '0.12';
 
+### TRICK (stop escaping for 'exdate' property)
+*Data::ICal::Property::_value_as_string = sub {
+    my $self = shift;
+    my $key = shift;
+    my $value = defined($self->value()) ? $self->value() : '';
+    
+    unless ($self->vcal10) {
+        my $lc_key = lc($key);
+        $value =~ s/\\/\\/gs;
+        $value =~ s/\Q;/\\;/gs unless ($lc_key eq 'rrule' || $lc_key eq 'exdate');
+        $value =~ s/,/\\,/gs unless ($lc_key eq 'rrule' || $lc_key eq 'exdate');
+        $value =~ s/\n/\\n/gs;
+        $value =~ s/\\N/\\N/gs;
+    }
+
+    return $value;
+
+};
+### END
+
 my %opt = (conf => 'config.yaml');
 GetOptions(\%opt, 'help', 'debug', 'conf=s') or pod2usage(2);
 pod2usage(1) if $opt{help};
@@ -59,6 +79,7 @@ for my $item ($cal->get_items()) {
 
     # handle frequency
     if ($item->can('frequency')) {
+	# rrule
 	my $freq = $item->frequency;
 	my %rrules = $freq ne 'WEEKDAYS' ?
 	    ( FREQ => $freq, WKST => 'SU' ) :
@@ -66,6 +87,18 @@ for my $item ($cal->get_items()) {
 	$rrules{UNTIL} = to_icaldate($item->until, $item->is_full_day)
 	    if $item->until;
 	$args{rrule} = join ';', map { $_ . '=' . $rrules{$_} } keys %rrules;
+
+	# exdate
+#	$args{exdate} = join ',', map { to_icaldate($_, 1) } $item->exdates
+#	    if $item->exdates;
+	if ($item->exdates) {
+	    if ($item->is_full_day) {
+		$args{exdate} = [join(',', map { to_icaldate($_, 1) } $item->exdates), { VALUE => 'DATE' }];
+	    } else {
+		$args{exdate} = [join(',', map { to_icaldate($_, 0) } $item->exdates), { TZID => $time_zone }];
+	    }
+	}
+
     }
 
     # set uid (recommended to be the identical syntax to RFC822)

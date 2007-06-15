@@ -51,15 +51,16 @@ sub get_items {
 	$csv->parse($line)
 	    or die 'Failed to parse CSV input';
 	my @fields = $csv->fields;
-	next if $#fields < 13; # num. of fields
+	my $num_fields = @fields - 1;
+	next if $num_fields < 13;
 	$fields[1] =~ s/^ts\.//; # remove rubbish
 
 	# Cybozu Calendar CSV Format
 	#      GENERIC     | RECCURENT
 	# [ 0] id?         | id?
 	# [ 1] created     | created
-	# [ 2] <BLANK>     x start_date
-	# [ 3] start_date  x end_date
+	# [ 2] <BLANK>     x modified start_date
+	# [ 3] start_date  x start_date / end_date
 	# [ 4] end_date    x until_date
 	# [ 5] start_time  | start_time
 	# [ 6] end_time    | end_time
@@ -80,7 +81,11 @@ sub get_items {
 	    @param{qw(start_date end_date)} = @fields[3,4];
 	    $item = WWW::CybozuOffice6::Calendar::Event->new(%param);
 	} else {
-	    @param{qw(start_date end_date until_date)} = @fields[2..4];
+	    @param{qw(start_date end_date until_date)} = @fields[3,3,4];
+	    if ($num_fields > 13) {
+		my @exdates = @fields[14..$num_fields];
+		$param{exdates} = \@exdates;
+	    }
 	    $item = WWW::CybozuOffice6::Calendar::RecurrentEvent->new(%param);
 	}
 
@@ -193,6 +198,13 @@ sub frequency		{ shift->_accessor('frequency',		@_) }
 sub frequency_value	{ shift->_accessor('frequency_value',	@_) }
 sub until		{ shift->_accessor('until',		@_) }
 
+sub exdates {
+    my $this = shift;
+    return unless $this->{exdates};
+    my $dates = $this->{exdates};
+    wantarray ? @$dates : @$dates[0];
+}
+
 our %FREQUENCY = ( y => 'YEARLY', m => 'MONTHLY', w => 'WEEKLY',
 		   d => 'DAILY', n => 'WEEKDAYS' );
 sub parse {
@@ -206,6 +218,7 @@ sub parse {
     $this->{frequency} = $FREQUENCY{$freq};
     $this->{frequency_value} = $param{freq_value} || 0;
 
+    # until
     if ($param{until_date} =~ m!^(\d+)/(\d+)/(\d+)$!) {
 	my %args = (year => $1, month => $2, day => $3);
 	my $until;
@@ -217,6 +230,16 @@ sub parse {
 	}
 	$this->{until} = $until;
     }
+
+    # exdates
+    if (defined $param{exdates}) {
+	my @dates;
+	for (@{$param{exdates}}) {
+	    push @dates, $this->to_datetime($_, $param{start_time});
+	}
+	$this->{exdates} = \@dates;
+    }
+
     1;
 }
 
