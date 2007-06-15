@@ -201,8 +201,8 @@ sub until		{ shift->_accessor('until',		@_) }
 sub exdates {
     my $this = shift;
     return unless $this->{exdates};
-    my $dates = $this->{exdates};
-    wantarray ? @$dates : @$dates[0];
+    my $exdates = $this->{exdates};
+    wantarray ? @$exdates : @$exdates[0];
 }
 
 our %FREQUENCY = ( y => 'YEARLY', m => 'MONTHLY', w => 'WEEKLY',
@@ -233,11 +233,11 @@ sub parse {
 
     # exdates
     if (defined $param{exdates}) {
-	my @dates;
+	my @exdates;
 	for (@{$param{exdates}}) {
-	    push @dates, $this->to_datetime($_, $param{start_time});
+	    push @exdates, $this->to_datetime($_, $param{start_time});
 	}
-	$this->{exdates} = \@dates;
+	$this->{exdates} = \@exdates;
     }
 
     1;
@@ -393,6 +393,11 @@ Frequency value of the recurrent item.
 
 End date of the recurrence for the recurrent item.  If the recurrence
 continues infinitely, thie value should be "undefined".
+
+=item exdates (Array of DateTime objects)
+
+Excluded dates of the reccurent item.  If the item has no excluded
+dates, this should be "undefined".
 
 =back
 

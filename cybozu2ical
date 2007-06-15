@@ -70,11 +70,11 @@ for my $item ($cal->get_items()) {
 	if $opt{debug} && $item->comment;
 
     if ($item->is_full_day) {
-	$args{dtstart} = [to_icaldate($item->start, 1), { VALUE => 'DATE' }];
-	$args{dtend}   = [to_icaldate($item->end,   1), { VALUE => 'DATE' }];
+	$args{dtstart} = [ to_icaldate($item->start, 1), { VALUE => 'DATE' } ];
+	$args{dtend}   = [ to_icaldate($item->end,   1), { VALUE => 'DATE' } ];
     } else {
-	$args{dtstart} = [to_icaldate($item->start, 0), { TZID => $time_zone }];
-	$args{dtend}   = [to_icaldate($item->end,   0), { TZID => $time_zone }];
+	$args{dtstart} = [ to_icaldate($item->start, 0), { TZID => $time_zone } ];
+	$args{dtend}   = [ to_icaldate($item->end,   0), { TZID => $time_zone } ];
     }
 
     # handle frequency
@@ -89,13 +89,14 @@ for my $item ($cal->get_items()) {
 	$args{rrule} = join ';', map { $_ . '=' . $rrules{$_} } keys %rrules;
 
 	# exdate
-#	$args{exdate} = join ',', map { to_icaldate($_, 1) } $item->exdates
-#	    if $item->exdates;
 	if ($item->exdates) {
+	    my $exdate;
 	    if ($item->is_full_day) {
-		$args{exdate} = [join(',', map { to_icaldate($_, 1) } $item->exdates), { VALUE => 'DATE' }];
+		$exdate = join ',', map { to_icaldate($_, 1) } $item->exdates;
+		$args{exdate} = [ $exdate, { VALUE => 'DATE' } ];
 	    } else {
-		$args{exdate} = [join(',', map { to_icaldate($_, 0) } $item->exdates), { TZID => $time_zone }];
+		$exdate = join ',', map { to_icaldate($_, 0) } $item->exdates;
+		$args{exdate} = [ $exdate, { TZID => $time_zone } ];
 	    }
 	}
 
