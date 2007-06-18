@@ -17,7 +17,7 @@ use DateTime;
 use Pod::Usage;
 use Getopt::Long;
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 ### TRICK (stop escaping for 'exdate' property)
 *Data::ICal::Property::_value_as_string = sub {
