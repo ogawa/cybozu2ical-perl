@@ -59,8 +59,8 @@ sub get_items {
 	#      GENERIC     | RECCURENT
 	# [ 0] id?         | id?
 	# [ 1] created     | created
-	# [ 2] <BLANK>     x modified start_date
-	# [ 3] start_date  x start_date / end_date
+	# [ 2] <BLANK>     x start_date / end_date
+	# [ 3] start_date  x initial start_date?
 	# [ 4] end_date    x until_date
 	# [ 5] start_time  | start_time
 	# [ 6] end_time    | end_time
@@ -81,7 +81,7 @@ sub get_items {
 	    @param{qw(start_date end_date)} = @fields[3,4];
 	    $item = WWW::CybozuOffice6::Calendar::Event->new(%param);
 	} else {
-	    @param{qw(start_date end_date until_date)} = @fields[3,3,4];
+	    @param{qw(start_date end_date until_date)} = @fields[2,2,4];
 	    if ($num_fields > 13) {
 		my @exdates = @fields[14..$num_fields];
 		$param{exdates} = \@exdates;
