@@ -6,7 +6,6 @@
 use strict;
 use lib 'lib';
 
-use YAML;
 use Encode qw/decode_utf8 encode/;
 use WWW::CybozuOffice6::Calendar;
 use Data::ICal;
@@ -19,7 +18,9 @@ use Getopt::Long;
 
 our $VERSION = '0.13';
 
+###
 ### TRICK (stop escaping for 'exdate' property)
+###
 *Data::ICal::Property::_value_as_string = sub {
     my $self = shift;
     my $key = shift;
@@ -37,16 +38,64 @@ our $VERSION = '0.13';
     return $value;
 
 };
-### END
 
-my %opt = (conf => 'config.yaml');
-GetOptions(\%opt, 'help', 'debug', 'conf=s') or pod2usage(2);
+###
+### Utility subroutines
+###
+sub to_icaldate {
+    my($dt, $is_full_day) = @_;
+    $is_full_day ?
+	$dt->ymd('') :
+	$dt->ymd('') . 'T' . $dt->hms('') . ($dt->time_zone->is_utc ? 'Z' : '');
+}
+
+sub encode_string {
+    my($enc, $text) = @_;
+    if ($enc eq 'ncr') {
+	$text =~ s/(\P{ASCII})/sprintf("&#%d;", ord($1))/eg;
+    } else {
+	$text = encode($enc, $text);
+    }
+    $text;
+}
+
+sub read_yaml {
+    my $file = shift;
+    my $yaml;
+    if (eval('require YAML::Tiny')) {
+	($yaml) = YAML::Tiny::LoadFile($file);
+    } elsif (eval('require YAML')) {
+	($yaml) = YAML::LoadFile($file);
+    }
+    if ($@) {
+	die "Faild to read yaml file: $@";
+    }
+    $yaml;
+}
+
+###
+### Main part
+###
+
+# Handle command-line options
+my %opt = (
+    conf			=> 'config.yaml',
+    'compat-google-calendar'	=> 0,
+);
+GetOptions(\%opt,
+	   'output=s',
+	   'conf=s',
+	   'compat-google-calendar',
+	   'debug',
+	   'help',
+       ) or pod2usage(2);
 pod2usage(1) if $opt{help};
 
-my $cfg = YAML::LoadFile($opt{conf});
-
+# Read configuration file
+my $cfg = read_yaml($opt{conf});
 my $time_zone = $cfg->{time_zone} || 'Asia/Tokyo';
 
+# Generate a root 'calendar' object
 my $vcalendar = Data::ICal->new();
 $vcalendar->add_properties(
     prodid   => "-//as-is.net/Cybozu2ICal $VERSION//EN",
@@ -56,7 +105,10 @@ $vcalendar->add_properties(
     'X-WR-TIMEZONE' => $time_zone
 );
 
+# Obtain Cybozu Office 6 Calendar items
 my $cal = WWW::CybozuOffice6::Calendar->new(%$cfg);
+
+# For each items, generate an 'event entry' and append it to the calendar
 for my $item ($cal->get_items()) {
     my $vevent = Data::ICal::Entry::Event->new();
     my %args = (
@@ -82,20 +134,31 @@ for my $item ($cal->get_items()) {
 	# rrule
 	my $freq = $item->frequency;
 	my %rrules = $freq ne 'WEEKDAYS' ?
-	    ( FREQ => $freq, WKST => 'SU' ) :
-	    ( FREQ => 'WEEKLY', WKST => 'SU', BYDAY => 'MO,TU,WE,TH,FR' );
+	    ( FREQ => $freq ) :
+	    ( FREQ => 'WEEKLY', BYDAY => 'MO,TU,WE,TH,FR' );
+	if ($item->frequency_value =~ /^\d(SU|MO|TU|WE|TH|FR|SA)$/) {
+	    $rrules{BYDAY} = $item->frequency_value;
+	    $rrules{INTERVAL} = 1;
+	}
 	$rrules{UNTIL} = to_icaldate($item->until, $item->is_full_day)
 	    if $item->until;
-	$args{rrule} = join ';', map { $_ . '=' . $rrules{$_} } keys %rrules;
+	$rrules{WKST} = 'SU'
+	    if $opt{'compat-google-calendar'};
+
+	my @rrules;
+	for (qw(FREQ COUNT INTERVAL BYMONTH BYMONTHDAY WKST BYDAY UNTIL)) {
+	    push @rrules, $_ . '=' . $rrules{$_}
+		if exists $rrules{$_};
+	}
+	$args{rrule} = join ';', @rrules;
 
 	# exdate
 	if ($item->exdates) {
-	    my $exdate;
 	    if ($item->is_full_day) {
-		$exdate = join ',', map { to_icaldate($_, 1) } $item->exdates;
+		my $exdate = join ',', map { to_icaldate($_, 1) } $item->exdates;
 		$args{exdate} = [ $exdate, { VALUE => 'DATE' } ];
 	    } else {
-		$exdate = join ',', map { to_icaldate($_, 0) } $item->exdates;
+		my $exdate = join ',', map { to_icaldate($_, 0) } $item->exdates;
 		$args{exdate} = [ $exdate, { TZID => $time_zone } ];
 	    }
 	}
@@ -109,12 +172,12 @@ for my $item ($cal->get_items()) {
     $vcalendar->add_entry($vevent);
 }
 
+# Generate a 'timezone entry' and append it to the calendar
 my $vtimezone = Data::ICal::Entry::TimeZone->new();
 $vtimezone->add_properties(tzid => $time_zone);
 
-# probably we need to support the Daylight Saving Time
+# probably we need to support the Daylight Saving Time, but not yet supported.
 my $standard = Data::ICal::Entry::TimeZone::Standard->new();
-
 my $std = DateTime->new(year => 1970, month => 1, day => 1,
 			hour => 0, minute => 0, second => 0,
 			time_zone => $time_zone);
@@ -131,23 +194,15 @@ $vtimezone->add_entry($standard);
 
 $vcalendar->add_entry($vtimezone);
 
-print encode_($cfg->{output_encoding} || 'utf8', $vcalendar->as_string);
-
-sub to_icaldate {
-    my($dt, $is_full_day) = @_;
-    $is_full_day ?
-	$dt->ymd('') :
-	$dt->ymd('') . 'T' . $dt->hms('') . ($dt->time_zone->is_utc ? 'Z' : '');
-}
-
-sub encode_ {
-    my($enc, $text) = @_;
-    if ($enc eq 'ncr') {
-	$text =~ s/(\P{ASCII})/sprintf("&#%d;", ord($1))/eg;
-    } else {
-	$text = encode($enc, $text);
-    }
-    $text;
+# Outputs the calendar as a string
+my $text = encode_string($cfg->{output_encoding} || 'utf8', $vcalendar->as_string);
+if ($opt{output}) {
+    local *FH;
+    open FH, ">$opt{output}" or die "Failed to write $opt{output}";
+    print FH $text;
+    close FH;
+} else {
+    print $text;
 }
 
 1;
@@ -197,10 +252,28 @@ This application has a command-line option as follows:
 
 =over 4
 
+=item --output /path/to/output.ics
+
+Specifies the output file.  By default, this application outputs to
+STDOUT.
+
 =item --conf /path/to/config.yaml
 
-Specifies the path to a configuration file. By default, C<config.yaml>
-in the current directory.
+Specifies the configuration file.  By default, C<config.yaml> in the
+current directory will be used.
+
+=item --compat-google-calendar
+
+To be compatible with Google Calendar.
+
+=item --debug
+
+Outputs Cybozu Office 6 CSV data as a COMMENT field of each events.
+It is just for debugging.
+
+=item --help
+
+Prints out this message.
 
 =back
 

@@ -86,6 +86,12 @@ sub get_items {
 		my @exdates = @fields[14..$num_fields];
 		$param{exdates} = \@exdates;
 	    }
+	    my $freq = $param{freq};
+	    if ($freq =~ /^[1-5]$/) {
+		$param{freq} = 'm';
+		my @week_str = ('SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA');
+		$param{freq_value} = $freq . $week_str[$param{freq_value}];
+	    }
 	    $item = WWW::CybozuOffice6::Calendar::RecurrentEvent->new(%param);
 	}
 
