@@ -16,7 +16,7 @@ use DateTime;
 use Pod::Usage;
 use Getopt::Long;
 
-our $VERSION = '0.13';
+our $VERSION = '0.20';
 
 ###
 ### TRICK (stop escaping for 'exdate' property)
@@ -148,27 +148,20 @@ for my $item ($cal->get_items()) {
     }
 
     # handle frequency
-    if ($item->can('frequency')) {
+    if ($item->can('rrule')) {
 	# rrule
-	my $freq = $item->frequency;
-	my %rrules = $freq ne 'WEEKDAYS' ?
-	    ( FREQ => $freq ) :
-	    ( FREQ => 'WEEKLY', BYDAY => 'MO,TU,WE,TH,FR' );
-	if ($item->frequency_value =~ /^\d(SU|MO|TU|WE|TH|FR|SA)$/) {
-	    $rrules{BYDAY} = $item->frequency_value;
-	    $rrules{INTERVAL} = 1;
-	}
-	$rrules{UNTIL} = to_icaldate($item->until, $item->is_full_day)
-	    if $item->until;
-	$rrules{WKST} = 'SU'
+	my %rrule = %{$item->rrule};
+	$rrule{UNTIL} = to_icaldate($rrule{UNTIL}, $item->is_full_day)
+	    if $rrule{UNTIL};
+	$rrule{WKST} = 'SU'
 	    if $opt{'compat-google-calendar'};
 
-	my @rrules;
+	my @rrule_list;
 	for (qw(FREQ COUNT INTERVAL BYMONTH BYMONTHDAY WKST BYDAY UNTIL)) {
-	    push @rrules, $_ . '=' . $rrules{$_}
-		if exists $rrules{$_};
+	    push @rrule_list, $_ . '=' . $rrule{$_}
+		if exists $rrule{$_};
 	}
-	$args{rrule} = join ';', @rrules;
+	$args{rrule} = join ';', @rrule_list;
 
 	# exdate
 	if ($item->exdates) {

@@ -10,7 +10,7 @@ use URI;
 use DateTime;
 use Text::CSV_XS;
 
-our $VERSION = '0.03';
+our $VERSION = '0.20';
 
 sub new {
     my($class, %param) = @_;
@@ -222,6 +222,8 @@ package WWW::CybozuOffice6::Calendar::RecurrentEvent;
 
 @WWW::CybozuOffice6::Calendar::RecurrentEvent::ISA = qw( WWW::CybozuOffice6::Calendar::Event );
 
+sub rrule		{ shift->_accessor('rrule',		@_) }
+# for compatibility
 sub frequency		{ shift->_accessor('frequency',		@_) }
 sub frequency_value	{ shift->_accessor('frequency_value',	@_) }
 sub until		{ shift->_accessor('until',		@_) }
@@ -243,8 +245,17 @@ sub parse {
     my $freq = $param{freq};
     return unless $freq && exists $FREQUENCY{$freq};
 
-    $this->{frequency} = $FREQUENCY{$freq};
-    $this->{frequency_value} = $param{freq_value} || 0;
+    # rrule
+    my %rrule = ();
+    if ($FREQUENCY{$freq} eq 'WEEKDAYS') {
+	%rrule = ( FREQ => 'WEEKLY', BYDAY => 'MO,TU,WE,TH,FR' );
+    } else {
+	%rrule = ( FREQ => $FREQUENCY{$freq} );
+    }
+    if ($param{freq_value} =~ /^\d(SU|MO|TU|WE|TH|FR|SA)$/) {
+	$rrule{BYDAY} = $param{freq_value};
+	$rrule{INTERVAL} = 1;
+    }
 
     # until
     if ($param{until_date} =~ m!^(\d+)/(\d+)/(\d+)$!) {
@@ -256,8 +267,10 @@ sub parse {
 	    $until = $this->{end}->clone->set(%args);
 	    $until->set_time_zone('UTC'); # timezone must be UTC
 	}
-	$this->{until} = $until;
+	$rrule{UNTIL} = $until;
     }
+
+    $this->{rrule} = \%rrule;
 
     # exdates
     if (defined $param{exdates}) {
@@ -267,6 +280,11 @@ sub parse {
 	}
 	$this->{exdates} = \@exdates;
     }
+
+    # for compatibility
+    $this->{frequency}       = $FREQUENCY{$freq};
+    $this->{frequency_value} = $param{freq_value} || 0;
+    $this->{until}           = $rrule{UNTIL} if exists $rrule{UNTIL};
 
     1;
 }
@@ -417,26 +435,31 @@ Created date of the item.  DateTime object.
 
 Modified date of the item, or current timestamp.  DateTime object.
 
-=item frequency (string)
+=item rrule (HASHREF of rrule properties)
+
+Assocative list of recurrence rules for the item, which is *roughly*
+based on iCalendar Specification (RFC 2445).
+
+=item exdates (ARRAYREF of DateTime objects)
+
+Excluded dates of the reccurent item.  If the item has no excluded
+dates, this should be "undefined".
+
+=item [obsolete] frequency (string)
 
 Frequency mode of the recurrent item.  Each recurrent items has one
 of the following frequency modes:
 
   "YEARLY", "MONTHLY", "WEEKLY", "DAILY", "WEEKDAYS"
 
-=item frequency_value (integer)
+=item [obsolete] frequency_value (integer)
 
 Frequency value of the recurrent item.
 
-=item until (DateTime object)
+=item [obsolete] until (DateTime object)
 
 End date of the recurrence for the recurrent item.  If the recurrence
 continues infinitely, thie value should be "undefined".
-
-=item exdates (Array of DateTime objects)
-
-Excluded dates of the reccurent item.  If the item has no excluded
-dates, this should be "undefined".
 
 =back
 
