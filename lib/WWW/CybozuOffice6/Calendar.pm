@@ -34,20 +34,55 @@ sub _accessor {
     $this->{$key};
 }
 
-sub get_items {
+sub request {
     my $this = shift;
 
-    my $res = $this->_request();
+    my $res = $this->{ua}->post($this->{url} . '?page=SyncCalendar', {
+	_System    => 'login',
+	_Login     => 1,
+	csv        => 1,
+	notimecard => 1,
+	defined $this->{username} ? (_Account => $this->{username}) : (),
+	defined $this->{userid}   ? (_Id      => $this->{userid}  ) : (),
+	Password   => $this->{password} || '',
+    });
     die 'Failed to access Cybozu Office 6: ' . $res->status_line
 	unless $res->is_success;
 
     my $content = $res->content;
     from_to($content, $this->{input_encoding} || 'shiftjis', 'utf8');
     my @lines = grep /^\d+,ts\.\d+,/, split(/\r?\n/, $content);
+    $this->{response} = \@lines;
+
+    scalar @lines ? \@lines : undef;
+}
+
+sub read_from_csv_file {
+    my $this = shift;
+    my ($file) = @_;
+    local *FH;
+    open FH, $file or die "Failed to read $file";
+    my @lines;
+    while (<FH>) {
+	chomp; push @lines, $_;
+    }
+    close(FH);
+    $this->{response} = \@lines;
+
+    scalar @lines ? \@lines : undef;
+}
+
+sub response {
+    my $res = $_[0]->{response} || {};
+    wantarray ? @$res : $res;
+}
+
+sub get_items {
+    my $this = shift;
 
     my @items;
     my $csv = Text::CSV_XS->new({ binary => 1 });
-    for my $line (@lines) {
+    for my $line ($this->response) {
 	$csv->parse($line)
 	    or die 'Failed to parse CSV input';
 	my @fields = $csv->fields;
@@ -100,19 +135,6 @@ sub get_items {
 	push @items, $item;
     }
     wantarray ? @items : $items[0];
-}
-
-sub _request {
-    my $this = shift;
-    $this->{ua}->post($this->{url} . '?page=SyncCalendar', {
-	_System    => 'login',
-	_Login     => 1,
-	csv        => 1,
-	notimecard => 1,
-	defined $this->{username} ? (_Account => $this->{username}) : (),
-	defined $this->{userid}   ? (_Id      => $this->{userid}  ) : (),
-	Password   => $this->{password} || '',
-    });
 }
 
 package WWW::CybozuOffice6::Calendar::Event;
@@ -267,6 +289,9 @@ WWW::CybozuOffice6::Calendar - Perl extension for accessing Cybozu Office 6 Cale
       password => 'password'
   );
 
+  # request calendar contents
+  $calendar->request();
+
   # get list of items in the calendar
   my @items = $calendar->get_items();
 
@@ -344,6 +369,14 @@ Gets/sets the LWP::UserAgent object used to access Cybozu Office 6.
 =item input_encoding([$new_input_encoding])
 
 Gets/sets the Cybozu Office 6 encoding.
+
+=item request()
+
+Requests to obtain the contents of Cybozu Office 6 Calendar.
+
+=item read_from_csv_file($filename)
+
+Instead of requesting Cybozu Office 6 server, reads from a local CSV file.
 
 =item get_items()
 

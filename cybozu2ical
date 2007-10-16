@@ -87,6 +87,8 @@ GetOptions(\%opt,
 	   'conf=s',
 	   'compat-google-calendar',
 	   'debug',
+	   'input-csv=s',
+	   'output-csv=s',
 	   'help',
        ) or pod2usage(2);
 pod2usage(1) if $opt{help};
@@ -107,6 +109,22 @@ $vcalendar->add_properties(
 
 # Obtain Cybozu Office 6 Calendar items
 my $cal = WWW::CybozuOffice6::Calendar->new(%$cfg);
+
+if ($opt{'input-csv'}) {
+    $cal->read_from_csv_file($opt{'input-csv'})
+	or die "Failed to read CSV file: $opt{'input-csv'}";
+} else {
+    $cal->request()
+	or die "Failed to get Cybozu Office 6 Calendar";
+}
+
+# Output the calendar CSV for debugging
+if ($opt{'output-csv'}) {
+    local *FH;
+    open FH, ">$opt{'output-csv'}" or die "Failed to write $opt{'output-csv'}";
+    print FH "$_\n" for $cal->response;
+    close FH;
+}
 
 # For each items, generate an 'event entry' and append it to the calendar
 for my $item ($cal->get_items()) {
