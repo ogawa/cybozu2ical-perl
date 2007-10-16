@@ -4,11 +4,11 @@ package WWW::CybozuOffice6::Calendar;
 use strict;
 use warnings;
 
+use Carp;
 use Encode qw/from_to/;
 use LWP::UserAgent;
 use URI;
 use DateTime;
-use Text::CSV_XS;
 
 our $VERSION = '0.20';
 
@@ -46,7 +46,7 @@ sub request {
 	defined $this->{userid}   ? (_Id      => $this->{userid}  ) : (),
 	Password   => $this->{password} || '',
     });
-    die 'Failed to access Cybozu Office 6: ' . $res->status_line
+    confess 'Failed to access Cybozu Office 6: ' . $res->status_line
 	unless $res->is_success;
 
     my $content = $res->content;
@@ -61,7 +61,7 @@ sub read_from_csv_file {
     my $this = shift;
     my ($file) = @_;
     local *FH;
-    open FH, $file or die "Failed to read $file";
+    open FH, $file or confess "Failed to read $file";
     my @lines;
     while (<FH>) {
 	chomp; push @lines, $_;
@@ -80,11 +80,19 @@ sub response {
 sub get_items {
     my $this = shift;
 
+    my $csv;
+    if (eval('require Text::CSV_XS')) {
+	$csv = Text::CSV_XS->new({ binary => 1 });
+    } elsif (eval('require Text::CSV')) {
+	$csv = Text::CSV->new();
+    } else {
+	confess 'Text::CSV_XS or Text::CSV package is required';
+    }
+
     my @items;
-    my $csv = Text::CSV_XS->new({ binary => 1 });
     for my $line ($this->response) {
 	$csv->parse($line)
-	    or die 'Failed to parse CSV input';
+	    or confess 'Failed to parse CSV input';
 	my @fields = $csv->fields;
 	my $num_fields = @fields - 1;
 	next if $num_fields < 13;
