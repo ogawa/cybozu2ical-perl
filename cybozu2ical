@@ -259,8 +259,6 @@ installed on your box.
 
 =head1 OPTIONS
 
-This application has a command-line option as follows:
-
 =over 4
 
 =item --output /path/to/output.ics
@@ -281,6 +279,15 @@ To be compatible with Google Calendar.
 
 Outputs Cybozu Office 6 CSV data as a COMMENT field of each events.
 It is just for debugging.
+
+=item --input-csv /path/to/input.csv
+
+Instead of requesting Cybozu Office 6 server, reads from a local CSV
+file.
+
+=item --output-csv /path/to/output.csv
+
+Specifies the output CSV file for debugging.
 
 =item --help
 
