@@ -134,6 +134,7 @@ for my $item ($cal->get_items()) {
 	description => decode_utf8($item->description),
 	created     => to_icaldate($item->created),
 	dtstamp     => to_icaldate($item->modified),
+	url         => $cal->url . '?page=ScheduleView&EID=' . $item->id,
     );
 
     $args{comment} = decode_utf8($item->comment)
