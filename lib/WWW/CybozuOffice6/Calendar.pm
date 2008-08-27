@@ -188,7 +188,7 @@ sub to_datetime {
     my($ymd, $hms) = @_;
 
     my %args;
-    return unless $ymd && $ymd =~ m!^(\d+)/(\d+)/(\d+)$!;
+    return unless $ymd && ($ymd =~ m!^(\d+)/(\d+)/(\d+)$! || $ymd =~ m!^da\.(\d+)\.(\d+)\.(\d+)$!);
     @args{qw(year month day)} = ($1, $2, $3);
 
     if ($hms && $hms ne ':') {

@@ -1,4 +1,5 @@
 cybozu_url: http://www.example.com/cbag/ag.cgi
+cybozu_version: 7
 calname: Your Calendar Name
 username: user
 #userid: XX
@@ -7,3 +8,4 @@ time_zone: Asia/Tokyo
 tzname: JST
 input_encoding: shiftjis
 output_encoding: utf8
+date_range: 30

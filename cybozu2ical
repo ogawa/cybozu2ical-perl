@@ -6,8 +6,7 @@
 use strict;
 use lib 'lib';
 
-use Encode qw/decode_utf8 encode/;
-use WWW::CybozuOffice6::Calendar;
+use Encode qw( decode_utf8 encode );
 use Data::ICal;
 use Data::ICal::Entry::Event;
 use Data::ICal::Entry::TimeZone;
@@ -107,8 +106,11 @@ $vcalendar->add_properties(
     'X-WR-TIMEZONE' => $time_zone
 );
 
-# Obtain Cybozu Office 6 Calendar items
-my $cal = WWW::CybozuOffice6::Calendar->new(%$cfg);
+# Obtain Cybozu Office 6/7 Calendar items
+my $cal_class = $cfg->{cybozu_version} == 7 ?
+    'WWW::CybozuOffice7::Calendar' : 'WWW::CybozuOffice6::Calendar';
+eval "use $cal_class;";
+my $cal = $cal_class->new(%$cfg);
 
 if ($opt{'input-csv'}) {
     $cal->read_from_csv_file($opt{'input-csv'})
@@ -254,7 +256,7 @@ installed on your box.
 
 =item DateTime
 
-=item YAML
+=item YAML or YAML::Tiny
 
 =back
 
