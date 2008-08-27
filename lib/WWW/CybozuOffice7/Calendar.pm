@@ -104,11 +104,28 @@ sub get_items {
 	# [14] $Item.Memo
 
 	my %param;
-	@param{qw(id created start_date end_date start_time end_time abbrev summary description)} = @fields[0,1,8..11,12..14];
+	@param{qw(id created freq freq_value start_date end_date start_time end_time abbrev summary description)} = @fields[0,1,4,5,8..11,12..14];
 
 	$param{time_zone} = $this->{time_zone} || 'Asia/Tokyo';
 
-	my $item = WWW::CybozuOffice6::Calendar::Event->new(%param);
+	my $item;
+	if (!$param{freq}) {
+	    $item = WWW::CybozuOffice6::Calendar::Event->new(%param);
+	}
+	else {
+	    @param{qw(end_date until_date)} = @fields[8,9];
+	    if ($num_fields > 14) {
+		my @exdates = @fields[14..$num_fields];
+		$param{exdates} = \@exdates;
+	    }
+	    my $freq = $param{freq};
+	    if ($freq =~ /^[1-5]$/) {
+		$param{freq} = 'm';
+		my @week_str = ('SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA');
+		$param{freq_value} = $freq . $week_str[$param{freq_value}];
+	    }
+	    $item = WWW::CybozuOffice6::Calendar::RecurrentEvent->new(%param);
+	}
 
 	next unless $item;
 	$item->comment($line); # save the CSV line as for debug info.

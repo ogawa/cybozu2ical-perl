@@ -4,8 +4,6 @@ package WWW::CybozuOffice6::Calendar;
 use strict;
 use warnings;
 
-use base qw( Class::Accessor::Fast );
-
 use Carp;
 use Encode qw( from_to );
 use LWP::UserAgent;
@@ -22,7 +20,19 @@ sub new {
     bless \%param, $class;
 }
 
-__PACKAGE__->mk_accessors(qw( url host username userid password ua input_encoding ));
+sub url			{ shift->_accessor('url',		@_) }
+sub host		{ shift->_accessor('host',		@_) }
+sub username		{ shift->_accessor('username',		@_) }
+sub userid		{ shift->_accessor('userid',		@_) }
+sub password		{ shift->_accessor('password',		@_) }
+sub ua			{ shift->_accessor('ua',		@_) }
+sub input_encoding	{ shift->_accessor('input_encoding',	@_) }
+sub _accessor {
+    my $this = shift;
+    my $key = shift;
+    $this->{$key} = shift if @_;
+    $this->{$key};
+}
 
 sub request {
     my $this = shift;
@@ -137,8 +147,6 @@ sub get_items {
 
 package WWW::CybozuOffice6::Calendar::Event;
 
-use base qw( Class::Accessor::Fast );
-
 sub new {
     my $class = shift;
     my $self = {
@@ -150,7 +158,21 @@ sub new {
     $self;
 }
 
-__PACKAGE__->mk_accessors(qw( id start end summary description created modified is_full_day comment ));
+sub id		{ shift->_accessor('id',		@_) }
+sub start	{ shift->_accessor('start',		@_) }
+sub end		{ shift->_accessor('end',		@_) }
+sub summary	{ shift->_accessor('summary',		@_) }
+sub description	{ shift->_accessor('description',	@_) }
+sub created	{ shift->_accessor('created',		@_) }
+sub modified	{ shift->_accessor('modified',		@_) }
+sub is_full_day	{ shift->_accessor('is_full_day',	@_) }
+sub comment	{ shift->_accessor('comment',		@_) }
+sub _accessor {
+    my $this = shift;
+    my $key = shift;
+    $this->{$key} = shift if @_;
+    $this->{$key};
+}
 
 sub parse {
     my($this, %param) = @_;
@@ -206,9 +228,13 @@ sub to_datetime {
 
 package WWW::CybozuOffice6::Calendar::RecurrentEvent;
 
-use base qw( Class::Accessor::Fast WWW::CybozuOffice6::Calendar::Event );
+use base qw( WWW::CybozuOffice6::Calendar::Event );
 
-__PACKAGE__->mk_accessors(qw( rrule frequency frequency_value until ));
+sub rrule		{ shift->_accessor('rrule',		@_) }
+# for compatibility
+sub frequency		{ shift->_accessor('frequency',		@_) }
+sub frequency_value	{ shift->_accessor('frequency_value',	@_) }
+sub until		{ shift->_accessor('until',		@_) }
 
 sub exdates {
     my $this = shift;
@@ -240,7 +266,7 @@ sub parse {
     }
 
     # until
-    if ($param{until_date} =~ m!^(\d+)/(\d+)/(\d+)$!) {
+    if ($param{until_date} =~ m!^(\d+)/(\d+)/(\d+)$! || $param{until_date} =~ m!^da\.(\d+)\.(\d+)\.(\d+)$!) {
 	my %args = (year => $1, month => $2, day => $3);
 	my $until;
 	if ($this->{is_full_day}) {
