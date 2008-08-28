@@ -70,7 +70,7 @@ __END__
 
 =head1 NAME
 
-WWW::CybozuOffice6::Calendar - Perl extension for accessing Cybozu Office 6 Calendar
+WWW::CybozuOffice6::Calendar - Perl extension for accessing Cybozu Office Calendar
 
 =head1 SYNOPSIS
 
@@ -92,7 +92,7 @@ WWW::CybozuOffice6::Calendar - Perl extension for accessing Cybozu Office 6 Cale
 =head1 DESCRIPTION
 
 C<WWW::CybozuOffice6::Calendar> is a Perl extension for accessing
-Cybozu Office 6 Calendar.
+Cybozu Office Calendar.
 
 =head1 REQUIREMENT
 
@@ -101,9 +101,13 @@ installed on your box.
 
 =over 4
 
-=item Text::CSV_XS
+=item Text::CSV_XS or Text::CSV
 
 =item DateTime
+
+=item LWP::UserAgent
+
+=item Class::Accessor::Fast
 
 =back
 
@@ -129,10 +133,6 @@ Username or UserID for Cybozu Office 6.
 =item password
 
 Password for Cybozu Office 6.
-
-=item ua
-
-(optional) An LWP::UserAgent object used for accessing Cybozu.
 
 =item input_encoding
 
@@ -258,11 +258,18 @@ You can browse the files via Trac from the following:
 
 Any comments, suggestions, or patches are welcome.
 
-=head1 AUTHOR
+=head1 LICENSE
 
-Hirotaka Ogawa E<lt>hirotaka.ogawa at gmail.comE<gt>
+Copyright (c) 2008 Hirotaka Ogawa E<lt>hirotaka.ogawa at gmail.comE<gt>.
+All rights reserved.
 
-This script is free software and licensed under the same terms as Perl
-(Artistic/GPL).
+This library is free software; you can redistribute it and/or modify
+it under the terms of either:
+       
+   a) the GNU General Public License as published by the Free Software
+      Foundation; either version 1, or (at your option) any later
+      version, or
+                         
+   b) the "Artistic License" which comes with Perl.
 
 =cut

@@ -268,13 +268,15 @@ installed on your box.
 
 =item Text::CSV_XS or Text::CSV
 
-=item Data::ICal
-
 =item DateTime
 
-=item YAML or YAML::Tiny
+=item LWP::UserAgent
 
 =item Class::Accessor::Fast
+
+=item Data::ICal
+
+=item YAML or YAML::Tiny
 
 =back
 

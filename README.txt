@@ -20,10 +20,11 @@ REQUIREMENT
 
     WWW::CybozuOffice6::Calendar
     Text::CSV_XS or Text::CSV
-    Data::ICal
     DateTime
-    YAML or YAML::Tiny
+    LWP::UserAgent
     Class::Accessor::Fast
+    Data::ICal
+    YAML or YAML::Tiny
 
 OPTIONS
     --output /path/to/output.ics
