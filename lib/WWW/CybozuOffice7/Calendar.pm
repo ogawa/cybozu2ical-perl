@@ -11,6 +11,8 @@ use Encode qw( from_to );
 use LWP::UserAgent;
 use URI;
 use DateTime;
+use WWW::CybozuOffice6::Calendar::Event;
+use WWW::CybozuOffice6::Calendar::RecurrentEvent;
 
 our $VERSION = '0.20';
 

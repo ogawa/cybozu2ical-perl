@@ -4,11 +4,13 @@ package WWW::CybozuOffice6::Calendar;
 use strict;
 use warnings;
 
+use base qw( Class::Accessor::Fast );
 use Carp;
 use Encode qw( from_to );
 use LWP::UserAgent;
 use URI;
-use DateTime;
+use WWW::CybozuOffice6::Calendar::Event;
+use WWW::CybozuOffice6::Calendar::RecurrentEvent;
 
 our $VERSION = '0.20';
 
@@ -20,20 +22,8 @@ sub new {
     bless \%param, $class;
 }
 
-sub url            { shift->_accessor( 'url',            @_ ) }
-sub host           { shift->_accessor( 'host',           @_ ) }
-sub username       { shift->_accessor( 'username',       @_ ) }
-sub userid         { shift->_accessor( 'userid',         @_ ) }
-sub password       { shift->_accessor( 'password',       @_ ) }
-sub ua             { shift->_accessor( 'ua',             @_ ) }
-sub input_encoding { shift->_accessor( 'input_encoding', @_ ) }
-
-sub _accessor {
-    my $this = shift;
-    my $key  = shift;
-    $this->{$key} = shift if @_;
-    $this->{$key};
-}
+__PACKAGE__->mk_accessors(
+    qw( url host username userid password ua input_encoding ));
 
 sub request {
     my $this = shift;
@@ -153,176 +143,6 @@ sub get_items {
         push @items, $item;
     }
     wantarray ? @items : $items[0];
-}
-
-package WWW::CybozuOffice6::Calendar::Event;
-
-sub new {
-    my $class = shift;
-    my $self  = {
-        is_full_day => 0,
-        modified    => DateTime->now,
-    };
-    bless $self, $class;
-    return unless $self->parse(@_);
-    $self;
-}
-
-sub id          { shift->_accessor( 'id',          @_ ) }
-sub start       { shift->_accessor( 'start',       @_ ) }
-sub end         { shift->_accessor( 'end',         @_ ) }
-sub summary     { shift->_accessor( 'summary',     @_ ) }
-sub description { shift->_accessor( 'description', @_ ) }
-sub created     { shift->_accessor( 'created',     @_ ) }
-sub modified    { shift->_accessor( 'modified',    @_ ) }
-sub is_full_day { shift->_accessor( 'is_full_day', @_ ) }
-sub comment     { shift->_accessor( 'comment',     @_ ) }
-
-sub _accessor {
-    my $this = shift;
-    my $key  = shift;
-    $this->{$key} = shift if @_;
-    $this->{$key};
-}
-
-sub parse {
-    my ( $this, %param ) = @_;
-
-    $this->{id}        = $param{id}        || '0';
-    $this->{time_zone} = $param{time_zone} || 'Asia/Tokyo';
-
-    my $start = $this->to_datetime( $param{start_date}, $param{start_time} );
-    my $end   = $this->to_datetime( $param{end_date},   $param{end_time} );
-    return unless $start && $end;
-
-    # (start_time == empty) => A full-day event
-    # (start_time != empty) && (end_time == empty) => A malformed event
-    if ( $param{start_time} eq ':' ) {
-        $start = $start->truncate( to => 'day' );
-        $end = $end->add( days => 1 )->truncate( to => 'day' );
-        $this->{is_full_day} = 1;
-    }
-    elsif ( $param{end_time} eq ':' ) {
-        $end = $start->clone->add( minutes => 10 );
-    }
-    $this->{start} = $start;
-    $this->{end}   = $end;
-
-    $this->{created} = DateTime->from_epoch( epoch => $param{created} || 0 );
-
-    my $summary =
-      ( $param{abbrev} ? $param{abbrev} . ': ' : '' ) . $param{summary};
-    $this->{summary} = $summary;
-    $this->{description} = $param{description} || $summary;
-    1;
-}
-
-# convert (ymd, hms) pair to a DateTime object (timezone: localtime)
-sub to_datetime {
-    my $this = shift;
-    my ( $ymd, $hms ) = @_;
-
-    my %args;
-    return
-      unless $ymd
-          && (   $ymd =~ m!^(\d+)/(\d+)/(\d+)$!
-              || $ymd =~ m!^da\.(\d+)\.(\d+)\.(\d+)$! );
-    @args{qw(year month day)} = ( $1, $2, $3 );
-
-    if ( $hms && $hms ne ':' ) {
-        return unless $hms =~ m!^(\d+):(\d+)(?:\:?(\d+)?)$!;
-        @args{qw(hour minute second)} = ( $1, $2, $3 || 0 );
-        @args{qw(hour minute second)} = ( 23, 59, 59 ) if $args{hour} > 23;
-    }
-    else {
-        @args{qw(hour minute second)} = ( 0, 0, 0 );
-    }
-
-    $args{time_zone} = $this->{time_zone};
-
-    DateTime->new(%args);
-}
-
-package WWW::CybozuOffice6::Calendar::RecurrentEvent;
-
-use base qw( WWW::CybozuOffice6::Calendar::Event );
-
-sub rrule { shift->_accessor( 'rrule', @_ ) }
-
-# for compatibility
-sub frequency       { shift->_accessor( 'frequency',       @_ ) }
-sub frequency_value { shift->_accessor( 'frequency_value', @_ ) }
-sub until           { shift->_accessor( 'until',           @_ ) }
-
-sub exdates {
-    my $this = shift;
-    return unless $this->{exdates};
-    my $exdates = $this->{exdates};
-    wantarray ? @$exdates : @$exdates[0];
-}
-
-our %FREQUENCY = (
-    y => 'YEARLY',
-    m => 'MONTHLY',
-    w => 'WEEKLY',
-    d => 'DAILY',
-    n => 'WEEKDAYS'
-);
-
-sub parse {
-    my ( $this, %param ) = @_;
-    $this->SUPER::parse(%param);
-
-    # frequency
-    my $freq = $param{freq};
-    return unless $freq && exists $FREQUENCY{$freq};
-
-    # rrule
-    my %rrule = ();
-    if ( $FREQUENCY{$freq} eq 'WEEKDAYS' ) {
-        %rrule = ( FREQ => 'WEEKLY', BYDAY => 'MO,TU,WE,TH,FR' );
-    }
-    else {
-        %rrule = ( FREQ => $FREQUENCY{$freq} );
-    }
-    if ( $param{freq_value} =~ /^\d(SU|MO|TU|WE|TH|FR|SA)$/ ) {
-        $rrule{BYDAY}    = $param{freq_value};
-        $rrule{INTERVAL} = 1;
-    }
-
-    # until
-    if (   $param{until_date} =~ m!^(\d+)/(\d+)/(\d+)$!
-        || $param{until_date} =~ m!^da\.(\d+)\.(\d+)\.(\d+)$! )
-    {
-        my %args = ( year => $1, month => $2, day => $3 );
-        my $until;
-        if ( $this->{is_full_day} ) {
-            $until = $this->to_datetime( $param{until_date}, ':' );
-        }
-        else {
-            $until = $this->{end}->clone->set(%args);
-            $until->set_time_zone('UTC');    # timezone must be UTC
-        }
-        $rrule{UNTIL} = $until;
-    }
-
-    $this->{rrule} = \%rrule;
-
-    # exdates
-    if ( defined $param{exdates} ) {
-        my @exdates;
-        for ( @{ $param{exdates} } ) {
-            push @exdates, $this->to_datetime( $_, $param{start_time} );
-        }
-        $this->{exdates} = \@exdates;
-    }
-
-    # for compatibility
-    $this->{frequency}       = $FREQUENCY{$freq};
-    $this->{frequency_value} = $param{freq_value} || 0;
-    $this->{until}           = $rrule{UNTIL} if exists $rrule{UNTIL};
-
-    1;
 }
 
 1;
