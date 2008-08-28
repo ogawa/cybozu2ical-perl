@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# cybozu2ical: Convert Cybozu Office 6 calendar into iCal format
+# cybozu2ical: Convert Cybozu Office calendar into iCalendar format
 #
 # $Id$
 
@@ -240,7 +240,7 @@ __END__
 
 =head1 NAME
 
-cybozu2ical - Convert Cybozu Office 6 calendar into iCal format
+cybozu2ical - Convert Cybozu Office calendar into iCalendar format
 
 =head1 SYNOPSIS
 
@@ -249,11 +249,11 @@ cybozu2ical - Convert Cybozu Office 6 calendar into iCal format
 
 =head1 DESCRIPTION
 
-C<cybozu2ical> is a command line application that fetches Cybozu
-Office 6 calendar items and converts them into a iCal file.  It allows
-you to easily integrate the Cybozu Calendar into iCalendar-enabled
-Calendar applications, such as Microsoft Outlook, Apple iCal, and of
-course, Google Calendar.
+C<cybozu2ical> is a command line application that fetches calendar
+items from Cybozu Office 6 or later, and converts them into an
+iCalendar file.  It allows you to easily integrate the Cybozu Calendar
+into iCalendar-enabled Calendar applications, such as Microsoft
+Outlook, Apple iCal, and of course, Google Calendar.
 
 You can run this via crontab, for example, every 1 hour.
 
@@ -266,13 +266,15 @@ installed on your box.
 
 =item WWW::CybozuOffice6::Calendar
 
-=item Text::CSV_XS
+=item Text::CSV_XS or Text::CSV
 
 =item Data::ICal
 
 =item DateTime
 
 =item YAML or YAML::Tiny
+
+=item Class::Accessor::Fast
 
 =back
 
@@ -282,35 +284,35 @@ installed on your box.
 
 =item --output /path/to/output.ics
 
-Specifies the output file.  By default, this application outputs to
+Specify the output file.  By default, this application outputs to
 STDOUT.
 
 =item --conf /path/to/config.yaml
 
-Specifies the configuration file.  By default, C<config.yaml> in the
+Specify the configuration file.  By default, C<config.yaml> in the
 current directory will be used.
 
 =item --compat-google-calendar
 
-To be compatible with Google Calendar.
+Output an iCalendar file compatible with Google Calendar.
 
 =item --debug
 
-Outputs Cybozu Office 6 CSV data as a COMMENT field of each events.
-It is just for debugging.
+Output CSV data in a COMMENT field of each events.  It's just for
+debugging.
 
 =item --input-csv /path/to/input.csv
 
-Instead of requesting Cybozu Office 6 server, reads from a local CSV
+Instead of requesting Cybozu Office 6 server, read from a local CSV
 file.
 
 =item --output-csv /path/to/output.csv
 
-Specifies the output CSV file for debugging.
+Specify the output CSV file for debugging.
 
 =item --help
 
-Prints out this message.
+Print out this message.
 
 =back
 
@@ -324,23 +326,55 @@ configure C<cybozu2ical>.
 
 =item cybozu_url
 
-Set the URL of your Cybozu Office 6.
+Set the URL of your Cybozu Office 6 or later.
+
+=item calname
+
+Set the calendar name string. iCalendar applications which properly
+handle X-WR-CALNAME header, is expected to use this string as a
+calendar name.
 
 =item username, userid
 
-Set your username or userid for Cybozu Office 6.
+Set your username or userid for Cybozu Office.
 
 =item password
 
-Set your password for Cybozu Office 6.
+Set your password for Cybozu Office.
 
 =item time_zone
 
-Set the timezone of your Cybozu Office 6 (e.g., Asia/Tokyo).
+Set the timezone of your Cybozu Office (e.g., Asia/Tokyo).
 
 =item tzname
 
-Set the short timezone name of your Cybozu Office 6 (e.g., JST).
+Set the short timezone name of your Cybozu Office (e.g., JST).
+
+=item input_encoding
+
+Set the charset of Cybozu Office. By default, C<input_encoding> is
+"shiftjis".
+
+=item output_encoding
+
+Set the charset of the iCalendar file.  By default, C<output_encoding>
+is "utf8".  If you need to output multibyte strings as Numeric
+Character References for some reason, set C<output_encoding> to "ncr".
+
+=item calendar_driver
+
+Set the calendar driver that C<cybozu2ical> employs.  By default,
+C<ApiCalendar> is used as C<calendar_driver>.
+
+Currently, C<ApiCalendar> and C<SyncCalendar> drivers are shipped with
+C<cybozu2ical>.  If you are using Cybozu Office 6, C<SyncCalendar> is
+strongly recommended.  Otherwise, you have to use C<ApiCalendar>.
+
+=item date_range (experimental)
+
+Set the date range of calendar, which means C<cybozu2ical> handles
+calendar items between N days before and after.  Default C<date_range>
+is 30.
 
 =back
 
@@ -357,11 +391,18 @@ You can browse the files via Trac from the following:
 
 Any comments, suggestions, or patches are welcome.
 
-=head1 AUTHOR
+=head1 LICENSE
 
-Hirotaka Ogawa E<lt>hirotaka.ogawa at gmail.comE<gt>
+Copyright (c) 2008 Hirotaka Ogawa E<lt>hirotaka.ogawa at gmail.comE<gt>.
+All rights reserved.
 
-This script is free software and licensed under the same terms as Perl
-(Artistic/GPL).
+This library is free software; you can redistribute it and/or modify
+it under the terms of either:
+       
+   a) the GNU General Public License as published by the Free Software
+      Foundation; either version 1, or (at your option) any later
+      version, or
+                         
+   b) the "Artistic License" which comes with Perl.
 
 =cut
