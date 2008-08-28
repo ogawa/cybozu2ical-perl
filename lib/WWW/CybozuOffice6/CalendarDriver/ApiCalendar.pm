@@ -1,10 +1,8 @@
 # $Id$
 
-package WWW::CybozuOffice7::Calendar;
+package WWW::CybozuOffice6::CalendarDriver::ApiCalendar;
 use strict;
 use warnings;
-
-use base qw( WWW::CybozuOffice6::Calendar );
 
 use Carp;
 use Encode qw( from_to );
@@ -13,10 +11,9 @@ use DateTime;
 use WWW::CybozuOffice6::Calendar::Event;
 use WWW::CybozuOffice6::Calendar::RecurrentEvent;
 
-our $VERSION = '0.30';
-
 sub request {
-    my $cal = shift;
+    my $class      = shift;
+    my ($cal)      = @_;
     my $date_range = $cal->{date_range} || 30;
 
     my $now = DateTime->now;
@@ -78,7 +75,8 @@ sub request {
 }
 
 sub get_items {
-    my $cal = shift;
+    my $class = shift;
+    my ($cal) = @_;
 
     my $csv;
     if ( eval('require Text::CSV_XS') ) {
@@ -87,9 +85,7 @@ sub get_items {
     elsif ( eval('require Text::CSV') ) {
         $csv = Text::CSV->new();
     }
-    else {
-        confess 'Text::CSV_XS or Text::CSV package is required';
-    }
+    confess 'Text::CSV_XS or Text::CSV package is required' unless $csv;
 
     my @items;
     for my $line ( $cal->response ) {
@@ -151,54 +147,3 @@ sub get_items {
 }
 
 1;
-__END__
-
-=head1 NAME
-
-WWW::CybozuOffice7::Calendar - Perl extension for accessing Cybozu Office 7 Calendar
-
-=head1 SYNOPSIS
-
-  use WWW::CybozuOffice7::Calendar;
-
-  # create a calendar object
-  my $calendar = WWW::CybozuOffice7::Calendar->new(
-      url => 'http://server/scripts/cbag/ag.exe',
-      username => 'username',
-      password => 'password'
-  );
-
-  # request calendar contents
-  $calendar->request();
-
-  # get list of items in the calendar
-  my @items = $calendar->get_items();
-
-=head1 DESCRIPTION
-
-C<WWW::CybozuOffice7::Calendar> is a Perl extension for accessing
-Cybozu Office 7 Calendar.
-
-For more detail, please consult POD of C<WWW::CybozuOffice6::Calendar>.
-
-=head1 DEVELOPMENT
-
-The development version is always available from the following
-subversion repository:
-
-  http://code.as-is.net/svn/public/WWW-CybozuOffice6-Calendar/trunk/
-
-You can browse the files via Trac from the following:
-
-  http://code.as-is.net/public/browser/WWW-CybozuOffice6-Calendar/trunk/
-
-Any comments, suggestions, or patches are welcome.
-
-=head1 AUTHOR
-
-Hirotaka Ogawa E<lt>hirotaka.ogawa at gmail.comE<gt>
-
-This script is free software and licensed under the same terms as Perl
-(Artistic/GPL).
-
-=cut

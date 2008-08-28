@@ -12,6 +12,7 @@ use Data::ICal::Entry::Event;
 use Data::ICal::Entry::TimeZone;
 use Data::ICal::Entry::TimeZone::Standard;
 use DateTime;
+use WWW::CybozuOffice6::Calendar;
 use URI;
 use Pod::Usage;
 use Getopt::Long;
@@ -108,12 +109,7 @@ $vcalendar->add_properties(
 );
 
 # Obtain Cybozu Office 6/7 Calendar items
-my $cal_class =
-  $cfg->{cybozu_version} == 7
-  ? 'WWW::CybozuOffice7::Calendar'
-  : 'WWW::CybozuOffice6::Calendar';
-eval "use $cal_class;";
-my $cal = $cal_class->new(%$cfg);
+my $cal = WWW::CybozuOffice6::Calendar->new(%$cfg);
 
 if ( $opt{'input-csv'} ) {
     $cal->read_from_csv_file( $opt{'input-csv'} )
