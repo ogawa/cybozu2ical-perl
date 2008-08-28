@@ -12,10 +12,11 @@ use Data::ICal::Entry::Event;
 use Data::ICal::Entry::TimeZone;
 use Data::ICal::Entry::TimeZone::Standard;
 use DateTime;
+use URI;
 use Pod::Usage;
 use Getopt::Long;
 
-our $VERSION = '0.20';
+our $VERSION = '0.30';
 
 ###
 ### TRICK (stop escaping for 'exdate' property)
@@ -190,7 +191,8 @@ for my $item ( $cal->get_items() ) {
     }
 
     # set uid (recommended to be the identical syntax to RFC822)
-    $args{uid} = $args{created} . '-' . $item->id . '@' . $cal->host;
+    my $host = URI->new($cal->url)->host || 'localhost';
+    $args{uid} = $args{created} . '-' . $item->id . '@' . $host;
 
     $vevent->add_properties(%args);
     $vcalendar->add_entry($vevent);

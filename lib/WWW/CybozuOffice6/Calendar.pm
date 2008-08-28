@@ -8,51 +8,46 @@ use base qw( Class::Accessor::Fast );
 use Carp;
 use Encode qw( from_to );
 use LWP::UserAgent;
-use URI;
 use WWW::CybozuOffice6::Calendar::Event;
 use WWW::CybozuOffice6::Calendar::RecurrentEvent;
 
-our $VERSION = '0.20';
+our $VERSION = '0.30';
 
 sub new {
     my ( $class, %param ) = @_;
-    $param{url}  ||= delete $param{cybozu_url};
-    $param{host} ||= URI->new( $param{url} )->host;
-    $param{ua}   ||= LWP::UserAgent->new();
+    $param{url} ||= delete $param{cybozu_url};
     bless \%param, $class;
 }
 
-__PACKAGE__->mk_accessors(
-    qw( url host username userid password ua input_encoding ));
+__PACKAGE__->mk_accessors(qw( url username userid password input_encoding ));
 
 sub request {
-    my $this = shift;
+    my $cal = shift;
+    my $date_range = $cal->{date_range} || 30;
 
-    my $res = $this->{ua}->post(
-        $this->{url} . '?page=SyncCalendar',
-        {
-            _System    => 'login',
-            _Login     => 1,
-            csv        => 1,
-            notimecard => 1,
-            defined $this->{username} ? ( _Account => $this->{username} ) : (),
-            defined $this->{userid}   ? ( _Id      => $this->{userid} )   : (),
-            Password => $this->{password} || '',
-        }
-    );
-    confess 'Failed to access Cybozu Office 6: ' . $res->status_line
+    my $ua         = LWP::UserAgent->new;
+    my $auth_param = {
+        _System => 'login',
+        _Login  => 1,
+        defined $cal->{username} ? ( _Account => $cal->{username} ) : (),
+        defined $cal->{userid}   ? ( _Id      => $cal->{userid} )   : (),
+        Password => $cal->{password} || '',
+    };
+
+    my $res = $ua->post( $cal->{url} . '?page=SyncCalendar', $auth_param );
+    confess 'Failed to access SyncCalendar API: ' . $res->status_line
       unless $res->is_success;
 
     my $content = $res->content;
-    from_to( $content, $this->{input_encoding} || 'shiftjis', 'utf8' );
+    from_to( $content, $cal->{input_encoding} || 'shiftjis', 'utf8' );
     my @lines = grep /^\d+,ts\.\d+,/, split( /\r?\n/, $content );
-    $this->{response} = \@lines;
+    $cal->{response} = \@lines;
 
     scalar @lines ? \@lines : undef;
 }
 
 sub read_from_csv_file {
-    my $this = shift;
+    my $cal = shift;
     my ($file) = @_;
     local *FH;
     open FH, $file or confess "Failed to read $file";
@@ -62,7 +57,7 @@ sub read_from_csv_file {
         push @lines, $_;
     }
     close(FH);
-    $this->{response} = \@lines;
+    $cal->{response} = \@lines;
 
     scalar @lines ? \@lines : undef;
 }
@@ -73,7 +68,7 @@ sub response {
 }
 
 sub get_items {
-    my $this = shift;
+    my $cal = shift;
 
     my $csv;
     if ( eval('require Text::CSV_XS') ) {
@@ -87,7 +82,7 @@ sub get_items {
     }
 
     my @items;
-    for my $line ( $this->response ) {
+    for my $line ( $cal->response ) {
         $csv->parse($line)
           or confess 'Failed to parse CSV input';
         my @fields     = $csv->fields;
@@ -116,7 +111,7 @@ sub get_items {
         @param{
             qw(id created start_time end_time freq freq_value abbrev summary description)
           } = @fields[ 0, 1, 5 .. 8, 11 .. 13 ];
-        $param{time_zone} = $this->{time_zone} || 'Asia/Tokyo';
+        $param{time_zone} = $cal->{time_zone} || 'Asia/Tokyo';
 
         my $item;
         if ( !$param{freq} ) {

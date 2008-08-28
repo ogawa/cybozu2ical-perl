@@ -9,16 +9,15 @@ use base qw( WWW::CybozuOffice6::Calendar );
 use Carp;
 use Encode qw( from_to );
 use LWP::UserAgent;
-use URI;
 use DateTime;
 use WWW::CybozuOffice6::Calendar::Event;
 use WWW::CybozuOffice6::Calendar::RecurrentEvent;
 
-our $VERSION = '0.20';
+our $VERSION = '0.30';
 
 sub request {
-    my $this = shift;
-    my $date_range = $this->{date_range} || 30;
+    my $cal = shift;
+    my $date_range = $cal->{date_range} || 30;
 
     my $now = DateTime->now;
     my $setdate =
@@ -26,24 +25,25 @@ sub request {
     my $enddate =
       $now->clone->add( days => $date_range )->strftime('da.%Y.%m.%d');
 
-    my $params = {
+    my $ua         = LWP::UserAgent->new;
+    my $auth_param = {
         _System => 'login',
         _Login  => 1,
-        defined $this->{username} ? ( _Account => $this->{username} ) : (),
-        defined $this->{userid}   ? ( _Id      => $this->{userid} )   : (),
-        Password => $this->{password} || '',
+        defined $cal->{username} ? ( _Account => $cal->{username} ) : (),
+        defined $cal->{userid}   ? ( _Id      => $cal->{userid} )   : (),
+        Password => $cal->{password} || '',
     };
 
     # First, get a list of EID
-    my $res = $this->{ua}->post(
-        $this->{url} . '?page=ApiCalendar',
+    my $res = $ua->post(
+        $cal->{url} . '?page=ApiCalendar',
         {
-            %$params,
+            %$auth_param,
             SetDate => $setdate,
             EndDate => $enddate,
         }
     );
-    confess 'Failed to access Cybozu Office 7: ' . $res->status_line
+    confess 'Failed to access ApiCalendar API: ' . $res->status_line
       unless $res->is_success;
 
     my @lines;
@@ -51,10 +51,10 @@ sub request {
         next unless $line =~ /^ts\.\d+,(\d+),(da\..+$)/;
 
         # Second, get a complete event from EID
-        my $res = $this->{ua}->post(
-            $this->{url} . '?page=ApiCalendar',
+        my $res = $ua->post(
+            $cal->{url} . '?page=ApiCalendar',
             {
-                %$params,
+                %$auth_param,
                 EID  => $1,
                 Date => $2,
             }
@@ -65,7 +65,7 @@ sub request {
         }
 
         my $content = $res->content;
-        from_to( $content, $this->{input_encoding} || 'shiftjis', 'utf8' );
+        from_to( $content, $cal->{input_encoding} || 'shiftjis', 'utf8' );
         my $line = ( split( /\r?\n/, $content ) )[0];
 
         # Cybozu bug: may produce broken CSV lines
@@ -73,12 +73,12 @@ sub request {
         push @lines, $line;
     }
 
-    $this->{response} = \@lines;
+    $cal->{response} = \@lines;
     scalar @lines ? \@lines : undef;
 }
 
 sub get_items {
-    my $this = shift;
+    my $cal = shift;
 
     my $csv;
     if ( eval('require Text::CSV_XS') ) {
@@ -92,7 +92,7 @@ sub get_items {
     }
 
     my @items;
-    for my $line ( $this->response ) {
+    for my $line ( $cal->response ) {
         $csv->parse($line)
           or confess 'Failed to parse CSV input';
         my @fields     = $csv->fields;
@@ -122,7 +122,7 @@ sub get_items {
             qw(id created freq freq_value start_date end_date start_time end_time abbrev summary description)
           } = @fields[ 0, 1, 4, 5, 8 .. 11, 12 .. 14 ];
 
-        $param{time_zone} = $this->{time_zone} || 'Asia/Tokyo';
+        $param{time_zone} = $cal->{time_zone} || 'Asia/Tokyo';
 
         my $item;
         if ( !$param{freq} ) {
