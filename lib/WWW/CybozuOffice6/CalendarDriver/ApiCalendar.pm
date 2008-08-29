@@ -63,12 +63,10 @@ sub request {
         }
 
         my $content = $res->content;
+        $content =~ s/\r?\n[^\r\n]*$//;    # remove last line
         from_to( $content, $cal->{input_encoding} || 'shiftjis', 'utf8' );
-        my $line = ( split( /\r?\n/, $content ) )[0];
 
-        # Cybozu bug: may produce broken CSV lines
-        $line .= '"' if $line !~ /\"$/;
-        push @lines, $line;
+        push @lines, $content;
     }
 
     $cal->{response} = \@lines;

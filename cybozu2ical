@@ -17,7 +17,7 @@ use URI;
 use Pod::Usage;
 use Getopt::Long;
 
-our $VERSION = '0.30';
+our $VERSION = '0.31';
 
 ###
 ### TRICK (stop escaping for 'exdate' property)

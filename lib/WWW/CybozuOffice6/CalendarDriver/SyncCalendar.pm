@@ -32,8 +32,8 @@ sub request {
     my $content = $res->content;
     from_to( $content, $cal->{input_encoding} || 'shiftjis', 'utf8' );
     my @lines = grep /^\d+,ts\.\d+,/, split( /\r?\n/, $content );
-    $cal->{response} = \@lines;
 
+    $cal->{response} = \@lines;
     scalar @lines ? \@lines : undef;
 }
 
