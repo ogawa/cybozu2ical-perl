@@ -88,9 +88,11 @@ sub read_yaml {
 my %opt = (
     conf                     => 'config.yaml',
     'compat-google-calendar' => 0,
+    'uid'                    => 1,
+    'url'                    => 1,
 );
 GetOptions( \%opt, 'output=s', 'conf=s', 'compat-google-calendar', 'debug',
-    'input-csv=s', 'output-csv=s', 'help', )
+    'input-csv=s', 'output-csv=s', 'help', 'uid!', 'url!' )
   or pod2usage(2);
 pod2usage(1) if $opt{help};
 
@@ -136,7 +138,9 @@ for my $item ( $cal->get_items() ) {
         description => decode_utf8( $item->description ),
         created     => to_icaldate( $item->created ),
         dtstamp     => to_icaldate( $item->modified ),
-        url         => $cal->url . '?page=ScheduleView&EID=' . $item->id,
+        $opt{url}
+        ? ( url => $cal->url . '?page=ScheduleView&EID=' . $item->id )
+        : (),
     );
 
     $args{comment} = decode_utf8( $item->comment )
@@ -187,8 +191,10 @@ for my $item ( $cal->get_items() ) {
     }
 
     # set uid (recommended to be the identical syntax to RFC822)
-    my $host = URI->new($cal->url)->host || 'localhost';
-    $args{uid} = $args{created} . '-' . $item->id . '@' . $host;
+    if ( $opt{uid} ) {
+        my $host = URI->new( $cal->url )->host || 'localhost';
+        $args{uid} = $args{created} . '-' . $item->id . '@' . $host;
+    }
 
     $vevent->add_properties(%args);
     $vcalendar->add_entry($vevent);
@@ -311,6 +317,14 @@ file.
 =item --output-csv /path/to/output.csv
 
 Specify the output CSV file for debugging.
+
+=item --uid, --no-uid
+
+Enable/disable UID fields of the iCalendar file.
+
+=item --url, --no-url
+
+Enable/disable URL fields of the iCalendar file.
 
 =item --help
 

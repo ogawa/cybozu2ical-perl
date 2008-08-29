@@ -49,6 +49,12 @@ OPTIONS
     --output-csv /path/to/output.csv
         Specify the output CSV file for debugging.
 
+    --uid, --no-uid
+        Enable/disable UID fields of the iCalendar file.
+
+    --url, --no-url
+        Enable/disable URL fields of the iCalendar file.
+
     --help
         Print out this message.
 
