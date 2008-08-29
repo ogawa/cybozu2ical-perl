@@ -4,15 +4,15 @@ package WWW::CybozuOffice6::CalendarDriver::SyncCalendar;
 use strict;
 use warnings;
 
+use base qw( WWW::CybozuOffice6::CalendarDriver );
 use Carp;
 use Encode qw( from_to );
 use LWP::UserAgent;
-use DateTime;
 use WWW::CybozuOffice6::Calendar::Event;
 use WWW::CybozuOffice6::Calendar::RecurrentEvent;
 
 sub request {
-    my $class      = shift;
+    my $driver     = shift;
     my ($cal)      = @_;
     my $date_range = $cal->{date_range} || 30;
 
@@ -38,19 +38,11 @@ sub request {
 }
 
 sub get_items {
-    my $class = shift;
+    my $driver = shift;
     my ($cal) = @_;
 
-    my $csv;
-    if ( eval('require Text::CSV_XS') ) {
-        $csv = Text::CSV_XS->new( { binary => 1 } );
-    }
-    elsif ( eval('require Text::CSV') ) {
-        $csv = Text::CSV->new;
-    }
-    confess 'Text::CSV_XS or Text::CSV package is required' unless $csv;
-
     my @items;
+    my $csv = $driver->{csv};
     for my $line ( $cal->response ) {
         $csv->parse($line)
           or confess 'Failed to parse CSV input';

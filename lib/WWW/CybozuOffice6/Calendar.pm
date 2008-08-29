@@ -18,17 +18,10 @@ sub new {
     my (%param) = @_;
     my $cal     = bless \%param, $class;
     $cal->{url} ||= delete $cal->{cybozu_url};
-    $cal->driver_init;
-    $cal;
-}
-
-sub driver_init {
-    my $cal = shift;
-    my $driver = $cal->{calendar_driver} || 'ApiCalendar';
-    $driver = 'WWW::CybozuOffice6::CalendarDriver::' . $driver
-      if $driver !~ m/^WWW::CybozuOffice6::CalendarDriver::/;
-    eval "use $driver;";
-    $cal->{calendar_driver} = $driver;
+    $cal->{calendar_driver} =
+      WWW::CybozuOffice6::CalendarDriverFactory->get_driver(
+        $cal->{calendar_driver} )
+      unless ref $cal->{calendar_driver};
     $cal;
 }
 
@@ -63,6 +56,18 @@ sub response {
 sub get_items {
     my $cal = shift;
     $cal->{calendar_driver}->get_items($cal);
+}
+
+package WWW::CybozuOffice6::CalendarDriverFactory;
+
+sub get_driver {
+    my $class = shift;
+    my ($driver_name) = @_;
+    $driver_name ||= 'ApiCalendar';
+    $driver_name = 'WWW::CybozuOffice6::CalendarDriver::' . $driver_name
+      if $driver_name !~ m/^WWW::CybozuOffice6::CalendarDriver::/;
+    eval "use $driver_name;";
+    $driver_name->new;
 }
 
 1;
