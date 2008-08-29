@@ -89,7 +89,7 @@ my %opt = (
     conf                     => 'config.yaml',
     'compat-google-calendar' => 0,
     'uid'                    => 1,
-    'url'                    => 1,
+    'url'                    => 0,
 );
 GetOptions( \%opt, 'output=s', 'conf=s', 'compat-google-calendar', 'debug',
     'input-csv=s', 'output-csv=s', 'help', 'uid!', 'url!' )
@@ -320,11 +320,11 @@ Specify the output CSV file for debugging.
 
 =item --uid, --no-uid
 
-Enable/disable UID fields of the iCalendar file.
+Enable/Disable UID fields of the iCalendar file. (Default: Enable)
 
 =item --url, --no-url
 
-Enable/disable URL fields of the iCalendar file.
+Enable/Disable URL fields of the iCalendar file. (Default: Disable)
 
 =item --help
 

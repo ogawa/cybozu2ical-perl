@@ -50,10 +50,10 @@ OPTIONS
         Specify the output CSV file for debugging.
 
     --uid, --no-uid
-        Enable/disable UID fields of the iCalendar file.
+        Enable/Disable UID fields of the iCalendar file. (Default: Enable)
 
     --url, --no-url
-        Enable/disable URL fields of the iCalendar file.
+        Enable/Disable URL fields of the iCalendar file. (Default: Disable)
 
     --help
         Print out this message.
