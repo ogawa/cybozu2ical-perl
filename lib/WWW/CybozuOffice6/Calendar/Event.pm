@@ -18,38 +18,39 @@ sub new {
 }
 
 __PACKAGE__->mk_accessors(
-    qw( id start end summary description created modified is_full_day comment )
+    qw( id start end summary description created time_zone modified is_full_day comment )
 );
 
 sub parse {
     my ( $this, %param ) = @_;
 
-    $this->{id}        = $param{id}        || '0';
-    $this->{time_zone} = $param{time_zone} || 'Asia/Tokyo';
+    $this->id( $param{id}               || '0' );
+    $this->time_zone( $param{time_zone} || 'Asia/Tokyo' );
 
-    my $start = $this->to_datetime( $param{start_date}, $param{start_time} );
-    my $end   = $this->to_datetime( $param{end_date},   $param{end_time} );
+    my $start = $this->to_datetime( $param{set_date}, $param{set_time} );
+    my $end   = $this->to_datetime( $param{end_date}, $param{end_time} );
     return unless $start && $end;
 
-    # (start_time == empty) => A full-day event
-    # (start_time != empty) && (end_time == empty) => A malformed event
-    if ( $param{start_time} eq ':' ) {
+    # (set_time == empty) => A full-day event
+    # (set_time != empty) && (end_time == empty) => A malformed event
+    if ( $param{set_time} eq ':' ) {
         $start = $start->truncate( to => 'day' );
         $end = $end->add( days => 1 )->truncate( to => 'day' );
-        $this->{is_full_day} = 1;
+        $this->is_full_day(1);
     }
     elsif ( $param{end_time} eq ':' ) {
         $end = $start->clone->add( minutes => 10 );
     }
-    $this->{start} = $start;
-    $this->{end}   = $end;
+    $this->start($start);
+    $this->end($end);
 
-    $this->{created} = DateTime->from_epoch( epoch => $param{created} || 0 );
+    $param{timestamp} =~ s/^ts\.//;    # remove rubbish
+    $this->created( DateTime->from_epoch( epoch => $param{timestamp} || 0 ) );
 
     my $summary =
-      ( $param{abbrev} ? $param{abbrev} . ': ' : '' ) . $param{summary};
-    $this->{summary} = $summary;
-    $this->{description} = $param{description} || $summary;
+      ( $param{event} ? $param{event} . ': ' : '' ) . $param{detail};
+    $this->summary($summary);
+    $this->description( $param{memo} || $summary );
     1;
 }
 
@@ -74,7 +75,7 @@ sub to_datetime {
         @args{qw(hour minute second)} = ( 0, 0, 0 );
     }
 
-    $args{time_zone} = $this->{time_zone};
+    $args{time_zone} = $this->time_zone;
 
     DateTime->new(%args);
 }

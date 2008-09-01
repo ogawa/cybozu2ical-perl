@@ -85,7 +85,6 @@ sub get_items {
         my @fields     = $csv->fields;
         my $num_fields = @fields - 1;
         next if $num_fields < 14;
-        $fields[1] =~ s/^ts\.//;    # remove rubbish
 
         # Cybozu Calendar CSV Format
         # [ 0] $Item.ID
@@ -106,27 +105,22 @@ sub get_items {
 
         my %param;
         @param{
-            qw(id created freq freq_value start_date end_date start_time end_time abbrev summary description)
+            qw(id timestamp type day set_date end_date set_time end_time event detail memo)
           } = @fields[ 0, 1, 4, 5, 8 .. 11, 12 .. 14 ];
 
         $param{time_zone} = $cal->{time_zone} || 'Asia/Tokyo';
 
+        if ( $num_fields > 14 ) {
+            my @exception = @fields[ 14 .. $num_fields ];
+            $param{exception} = \@exception;
+        }
+
         my $item;
-        if ( !$param{freq} ) {
+        if ( !$param{type} ) {
             $item = WWW::CybozuOffice6::Calendar::Event->new(%param);
         }
         else {
             @param{qw(end_date until_date)} = @fields[ 8, 9 ];
-            if ( $num_fields > 14 ) {
-                my @exdates = @fields[ 14 .. $num_fields ];
-                $param{exdates} = \@exdates;
-            }
-            my $freq = $param{freq};
-            if ( $freq =~ /^[1-5]$/ ) {
-                $param{freq} = 'm';
-                my @week_str = ( 'SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA' );
-                $param{freq_value} = $freq . $week_str[ $param{freq_value} ];
-            }
             $item = WWW::CybozuOffice6::Calendar::RecurrentEvent->new(%param);
         }
 
