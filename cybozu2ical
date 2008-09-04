@@ -138,9 +138,6 @@ for my $item ( $cal->get_items() ) {
         description => decode_utf8( $item->description ),
         created     => to_icaldate( $item->created ),
         dtstamp     => to_icaldate( $item->modified ),
-        $opt{url}
-        ? ( url => $cal->url . '?page=ScheduleView&EID=' . $item->id )
-        : (),
     );
 
     $args{comment} = decode_utf8( $item->comment )
@@ -191,10 +188,12 @@ for my $item ( $cal->get_items() ) {
     }
 
     # set uid (recommended to be the identical syntax to RFC822)
-    if ( $opt{uid} ) {
-        my $host = URI->new( $cal->url )->host || 'localhost';
-        $args{uid} = $args{created} . '-' . $item->id . '@' . $host;
-    }
+    $args{uid} =
+      $item->id . '@' . ( URI->new( $cal->url )->host || 'localhost' )
+      if $opt{uid};
+
+    $args{url} = $cal->url . '?page=ScheduleView&EID=' . $item->id
+      if $opt{url};
 
     $vevent->add_properties(%args);
     $vcalendar->add_entry($vevent);
