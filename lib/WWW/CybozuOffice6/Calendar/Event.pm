@@ -33,12 +33,12 @@ sub parse {
 
     # (set_time == empty) => A full-day event
     # (set_time != empty) && (end_time == empty) => A malformed event
-    if ( $param{set_time} eq ':' ) {
+    if ( $param{set_time} eq '' || $param{set_time} eq ':' ) {
         $start = $start->truncate( to => 'day' );
         $end = $end->add( days => 1 )->truncate( to => 'day' );
         $this->is_full_day(1);
     }
-    elsif ( $param{end_time} eq ':' ) {
+    elsif ( $param{end_time} eq '' || $param{end_time} eq ':' ) {
         $end = $start->clone->add( minutes => 10 );
     }
     $this->start($start);
@@ -62,8 +62,8 @@ sub to_datetime {
     my %args;
     return
       unless $ymd
-          && (   $ymd =~ m!^(\d+)/(\d+)/(\d+)$!
-              || $ymd =~ m!^da\.(\d+)\.(\d+)\.(\d+)$! );
+          && ( $ymd =~ m!^da\.(\d+)\.(\d+)\.(\d+)$!
+              ||    $ymd =~ m!^(\d+)/(\d+)/(\d+)$! );
     @args{qw(year month day)} = ( $1, $2, $3 );
 
     if ( $hms && $hms ne ':' ) {

@@ -17,7 +17,7 @@ use URI;
 use Pod::Usage;
 use Getopt::Long;
 
-our $VERSION = '0.31';
+our $VERSION = '0.32';
 
 ###
 ### TRICK (stop escaping for 'exdate' property)
@@ -140,9 +140,6 @@ for my $item ( $cal->get_items() ) {
         dtstamp     => to_icaldate( $item->modified ),
     );
 
-    $args{comment} = decode_utf8( $item->comment )
-      if $opt{debug} && $item->comment;
-
     if ( $item->is_full_day ) {
         $args{dtstart} =
           [ to_icaldate( $item->start, 1 ), { VALUE => 'DATE' } ];
@@ -194,6 +191,9 @@ for my $item ( $cal->get_items() ) {
 
     $args{url} = $cal->url . '?page=ScheduleView&EID=' . $item->id
       if $opt{url};
+
+    $args{comment} = decode_utf8( $item->comment )
+      if $opt{debug} && $item->comment;
 
     $vevent->add_properties(%args);
     $vcalendar->add_entry($vevent);
