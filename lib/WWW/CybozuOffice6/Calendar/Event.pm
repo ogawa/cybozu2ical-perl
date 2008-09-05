@@ -18,7 +18,7 @@ sub new {
 }
 
 __PACKAGE__->mk_accessors(
-    qw( id start end summary description created time_zone modified is_full_day comment )
+    qw( id start end summary description created time_zone modified is_shared is_private is_full_day comment )
 );
 
 sub parse {
@@ -51,6 +51,9 @@ sub parse {
       ( $param{event} ? $param{event} . ': ' : '' ) . $param{detail};
     $this->summary($summary);
     $this->description( $param{memo} || $summary );
+
+    $this->is_shared(1)  if $param{shared};
+    $this->is_private(1) if $param{private};
     1;
 }
 
@@ -62,8 +65,8 @@ sub to_datetime {
     my %args;
     return
       unless $ymd
-          && ( $ymd =~ m!^da\.(\d+)\.(\d+)\.(\d+)$!
-              ||    $ymd =~ m!^(\d+)/(\d+)/(\d+)$! );
+          && (   $ymd =~ m!^da\.(\d+)\.(\d+)\.(\d+)$!
+              || $ymd =~ m!^(\d+)/(\d+)/(\d+)$! );
     @args{qw(year month day)} = ( $1, $2, $3 );
 
     if ( $hms && $hms ne ':' ) {

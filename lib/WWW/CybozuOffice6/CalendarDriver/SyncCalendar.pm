@@ -68,8 +68,9 @@ sub get_items {
         # [13] Memo
 
         my %param;
-        @param{ qw(id timestamp set_time end_time type day event detail memo)
-          } = @fields[ 0, 1, 5 .. 8, 11 .. 13 ];
+        @param{
+            qw(id timestamp set_time end_time type day private banner event detail memo)
+          } = @fields[ 0, 1, 5 .. 13 ];
 
         $param{time_zone} = $cal->{time_zone} || 'Asia/Tokyo';
 

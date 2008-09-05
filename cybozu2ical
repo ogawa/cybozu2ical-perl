@@ -192,6 +192,9 @@ for my $item ( $cal->get_items() ) {
     $args{url} = $cal->url . '?page=ScheduleView&EID=' . $item->id
       if $opt{url};
 
+    # $args{class}  = $item->is_private ? 'PRIVATE'     : 'PUBLIC';
+    # $args{transp} = $item->is_private ? 'TRANSPARENT' : 'OPAQUE';
+
     $args{comment} = decode_utf8( $item->comment )
       if $opt{debug} && $item->comment;
 
