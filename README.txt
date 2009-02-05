@@ -31,6 +31,11 @@ OPTIONS
         Specify the output file. By default, this application outputs to
         STDOUT.
 
+    --update /path/to/output.ics
+        Specify the output file. Instead of overwriting an iCalendar file,
+        this option allows you to merge the original file with newly
+        obtained CybozuOffice 6 events.
+
     --conf /path/to/config.yaml
         Specify the configuration file. By default, "config.yaml" in the
         current directory will be used.
@@ -50,10 +55,10 @@ OPTIONS
         Specify the output CSV file for debugging.
 
     --uid, --no-uid
-        Enable/Disable UID fields of the iCalendar file. (Default: Enable)
+        Enable/Disable UID fields of the iCalendar file. (Default: Enabled)
 
     --url, --no-url
-        Enable/Disable URL fields of the iCalendar file. (Default: Disable)
+        Enable/Disable URL fields of the iCalendar file. (Default: Disabled)
 
     --help
         Print out this message.
@@ -103,8 +108,9 @@ CONFIGURATION
 
     date_range (experimental)
         Set the date range of calendar, which means "cybozu2ical" handles
-        calendar items between N days before and after. Default "date_range"
-        is 30.
+        calendar items from N days before to the end. By default,
+        "cybozu2ical" handles calendar items from the beginning of the
+        current year to the end.
 
 DEVELOPMENT
     The development version is always available from the following
@@ -128,6 +134,6 @@ LICENSE
        a) the GNU General Public License as published by the Free Software
           Foundation; either version 1, or (at your option) any later
           version, or
-                         
-       b) the "Artistic License" which comes with Perl.
+                             
+   b) the "Artistic License" which comes with Perl.
 
