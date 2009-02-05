@@ -80,6 +80,170 @@ sub read_yaml {
     $yaml;
 }
 
+sub generate_vcalendar {
+    my ( $cal, $param ) = @_;
+
+    my $time_zone = $param->{time_zone} || 'Asia/Tokyo';
+    my $tzname    = $param->{tzname}    || 'JST';
+    my $std       = DateTime->new(
+        year      => 1970,
+        month     => 1,
+        day       => 1,
+        hour      => 0,
+        minute    => 0,
+        second    => 0,
+        time_zone => $time_zone
+    );
+    my $offset = DateTime::TimeZone::offset_as_string( $std->offset )
+      || '+0900';
+
+    # Generate a root 'calendar' object
+    my $vcalendar = Data::ICal->new();
+    $vcalendar->add_properties(
+        prodid   => "-//as-is.net/Cybozu2ICal $VERSION//EN",
+        calscale => 'GREGORIAN',
+        method   => 'PUBLISH',
+        $param->{calname} ? ( 'X-WR-CALNAME' => $param->{calname} ) : (),
+        'X-WR-TIMEZONE' => $time_zone
+    );
+
+    # Generate a 'timezone entry' and append it to the calendar
+    my $vtimezone = Data::ICal::Entry::TimeZone->new();
+    $vtimezone->add_properties( tzid => $time_zone );
+
+    # probably we need to support the Daylight Saving Time,
+    # but not yet implemented.
+    my $standard = Data::ICal::Entry::TimeZone::Standard->new();
+    $standard->add_properties(
+        tzoffsetfrom => $offset,
+        tzoffsetto   => $offset,
+        tzname       => $tzname,
+        dtstart      => to_icaldate($std)
+    );
+    $vtimezone->add_entry($standard);
+
+    $vcalendar->add_entry($vtimezone);
+
+    # For each items, generate an 'event entry' and append it to the calendar
+    for my $item ( $cal->get_items() ) {
+        my $vevent = Data::ICal::Entry::Event->new();
+        my %args   = (
+            summary     => decode_utf8( $item->summary ),
+            description => decode_utf8( $item->description ),
+            created     => to_icaldate( $item->created ),
+            dtstamp     => to_icaldate( $item->modified ),
+        );
+
+        if ( $item->is_full_day ) {
+            $args{dtstart} =
+              [ to_icaldate( $item->start, 1 ), { VALUE => 'DATE' } ];
+            $args{dtend} =
+              [ to_icaldate( $item->end, 1 ), { VALUE => 'DATE' } ];
+        }
+        else {
+            $args{dtstart} =
+              [ to_icaldate( $item->start, 0 ), { TZID => $time_zone } ];
+            $args{dtend} =
+              [ to_icaldate( $item->end, 0 ), { TZID => $time_zone } ];
+        }
+
+        # handle frequency
+        if ( $item->can('rrule') ) {
+
+            # rrule
+            my %rrule = %{ $item->rrule };
+            $rrule{UNTIL} = to_icaldate( $rrule{UNTIL}, $item->is_full_day )
+              if $rrule{UNTIL};
+            $rrule{WKST} = 'SU'
+              if $param->{'compat-google-calendar'};
+
+            my @rrule_list;
+            for (qw(FREQ COUNT INTERVAL BYMONTH BYMONTHDAY WKST BYDAY UNTIL)) {
+                push @rrule_list, $_ . '=' . $rrule{$_}
+                  if exists $rrule{$_};
+            }
+            $args{rrule} = join ';', @rrule_list;
+
+            # exdate
+            if ( $item->exdates ) {
+                if ( $item->is_full_day ) {
+                    my $exdate = join ',',
+                      map { to_icaldate( $_, 1 ) } $item->exdates;
+                    $args{exdate} = [ $exdate, { VALUE => 'DATE' } ];
+                }
+                else {
+                    my $exdate = join ',',
+                      map { to_icaldate( $_, 0 ) } $item->exdates;
+                    $args{exdate} = [ $exdate, { TZID => $time_zone } ];
+                }
+            }
+        }
+
+        # set uid (recommended to be the identical syntax to RFC822)
+        $args{uid} =
+          $item->id . '@' . ( URI->new( $cal->url )->host || 'localhost' )
+          if $param->{uid};
+
+        $args{url} = $cal->url . '?page=ScheduleView&EID=' . $item->id
+          if $param->{url};
+
+        # $args{class}  = $item->is_private ? 'PRIVATE'     : 'PUBLIC';
+        # $args{transp} = $item->is_private ? 'TRANSPARENT' : 'OPAQUE';
+
+        $args{comment} = decode_utf8( $item->comment )
+          if $param->{debug} && $item->comment;
+
+        $vevent->add_properties(%args);
+        $vcalendar->add_entry($vevent);
+    }
+
+    $vcalendar;
+}
+
+sub update_vcalendar {
+    my ( $vcalendar, $filename, $param ) = @_;
+
+    return $vcalendar unless -e $filename;
+    return $vcalendar unless $param->{uid};
+    open my $fh, $filename or die "Failed to read $filename";
+    my @lines = <$fh>;
+    close $fh;
+    my $vcal_orig = Data::ICal->new( data => decode_utf8( join( '', @lines ) ) )
+      or return $vcalendar;
+
+    my %event_entries;
+    my @common_entries;
+    for my $entry ( @{ $vcalendar->{entries} } ) {
+        if ( $entry->isa('Data::ICal::Entry::Event') ) {
+            my $uid_prop = $entry->properties->{uid}->[0]
+              or next;
+            my $uid = $uid_prop->value
+              or next;
+            $event_entries{$uid} = $entry;
+        }
+        else {
+            push @common_entries, $entry;
+        }
+    }
+    for my $entry ( @{ $vcal_orig->{entries} } ) {
+        if ( $entry->isa('Data::ICal::Entry::Event') ) {
+            my $uid_prop = $entry->properties->{uid}->[0]
+              or next;
+            my $uid = $uid_prop->value
+              or next;
+            unless ( exists $event_entries{$uid} ) {
+#		my $dtstart_prop = $entry->properties->{dtstart}->[0];
+#		print Dumper($entry->properties);
+                $entry->add_properties( status => 'CANCELLED' );
+                $event_entries{$uid} = $entry;
+            }
+        }
+    }
+    exit;
+    $vcalendar->{entries} = [ @common_entries, values %event_entries ];
+    $vcalendar;
+}
+
 ###
 ### Main part
 ###
@@ -91,24 +255,13 @@ my %opt = (
     'uid'                    => 1,
     'url'                    => 0,
 );
-GetOptions( \%opt, 'output=s', 'conf=s', 'compat-google-calendar', 'debug',
-    'input-csv=s', 'output-csv=s', 'help', 'uid!', 'url!' )
+GetOptions( \%opt, 'output=s', 'update=s', 'conf=s', 'compat-google-calendar',
+    'debug', 'input-csv=s', 'output-csv=s', 'help', 'uid!', 'url!' )
   or pod2usage(2);
 pod2usage(1) if $opt{help};
 
 # Read configuration file
 my $cfg = read_yaml( $opt{conf} );
-my $time_zone = $cfg->{time_zone} || 'Asia/Tokyo';
-
-# Generate a root 'calendar' object
-my $vcalendar = Data::ICal->new();
-$vcalendar->add_properties(
-    prodid   => "-//as-is.net/Cybozu2ICal $VERSION//EN",
-    calscale => 'GREGORIAN',
-    method   => 'PUBLISH',
-    $cfg->{calname} ? ( 'X-WR-CALNAME' => $cfg->{calname} ) : (),
-    'X-WR-TIMEZONE' => $time_zone
-);
 
 # Obtain Cybozu Office 6/7 Calendar items
 my $cal = WWW::CybozuOffice6::Calendar->new(%$cfg);
@@ -130,118 +283,24 @@ if ( $opt{'output-csv'} ) {
     close FH;
 }
 
-# For each items, generate an 'event entry' and append it to the calendar
-for my $item ( $cal->get_items() ) {
-    my $vevent = Data::ICal::Entry::Event->new();
-    my %args   = (
-        summary     => decode_utf8( $item->summary ),
-        description => decode_utf8( $item->description ),
-        created     => to_icaldate( $item->created ),
-        dtstamp     => to_icaldate( $item->modified ),
-    );
+# Generate a Data::ICal from a WWW::CybozuOffice6::Calendar
+my $vcalendar = generate_vcalendar( $cal, { %$cfg, %opt } );
 
-    if ( $item->is_full_day ) {
-        $args{dtstart} =
-          [ to_icaldate( $item->start, 1 ), { VALUE => 'DATE' } ];
-        $args{dtend} = [ to_icaldate( $item->end, 1 ), { VALUE => 'DATE' } ];
-    }
-    else {
-        $args{dtstart} =
-          [ to_icaldate( $item->start, 0 ), { TZID => $time_zone } ];
-        $args{dtend} = [ to_icaldate( $item->end, 0 ), { TZID => $time_zone } ];
-    }
-
-    # handle frequency
-    if ( $item->can('rrule') ) {
-
-        # rrule
-        my %rrule = %{ $item->rrule };
-        $rrule{UNTIL} = to_icaldate( $rrule{UNTIL}, $item->is_full_day )
-          if $rrule{UNTIL};
-        $rrule{WKST} = 'SU'
-          if $opt{'compat-google-calendar'};
-
-        my @rrule_list;
-        for (qw(FREQ COUNT INTERVAL BYMONTH BYMONTHDAY WKST BYDAY UNTIL)) {
-            push @rrule_list, $_ . '=' . $rrule{$_}
-              if exists $rrule{$_};
-        }
-        $args{rrule} = join ';', @rrule_list;
-
-        # exdate
-        if ( $item->exdates ) {
-            if ( $item->is_full_day ) {
-                my $exdate = join ',',
-                  map { to_icaldate( $_, 1 ) } $item->exdates;
-                $args{exdate} = [ $exdate, { VALUE => 'DATE' } ];
-            }
-            else {
-                my $exdate = join ',',
-                  map { to_icaldate( $_, 0 ) } $item->exdates;
-                $args{exdate} = [ $exdate, { TZID => $time_zone } ];
-            }
-        }
-
-    }
-
-    # set uid (recommended to be the identical syntax to RFC822)
-    $args{uid} =
-      $item->id . '@' . ( URI->new( $cal->url )->host || 'localhost' )
-      if $opt{uid};
-
-    $args{url} = $cal->url . '?page=ScheduleView&EID=' . $item->id
-      if $opt{url};
-
-    # $args{class}  = $item->is_private ? 'PRIVATE'     : 'PUBLIC';
-    # $args{transp} = $item->is_private ? 'TRANSPARENT' : 'OPAQUE';
-
-    $args{comment} = decode_utf8( $item->comment )
-      if $opt{debug} && $item->comment;
-
-    $vevent->add_properties(%args);
-    $vcalendar->add_entry($vevent);
+if ( $opt{update} ) {
+    $vcalendar = update_vcalendar( $vcalendar, $opt{update}, { %$cfg, %opt } );
 }
-
-# Generate a 'timezone entry' and append it to the calendar
-my $vtimezone = Data::ICal::Entry::TimeZone->new();
-$vtimezone->add_properties( tzid => $time_zone );
-
-# probably we need to support the Daylight Saving Time, but not yet supported.
-my $standard = Data::ICal::Entry::TimeZone::Standard->new();
-my $std      = DateTime->new(
-    year      => 1970,
-    month     => 1,
-    day       => 1,
-    hour      => 0,
-    minute    => 0,
-    second    => 0,
-    time_zone => $time_zone
-);
-my $offset = DateTime::TimeZone::offset_as_string( $std->offset ) || '+0900';
-my $tzname = $cfg->{tzname} || 'JST';
-
-$standard->add_properties(
-    tzoffsetfrom => $offset,
-    tzoffsetto   => $offset,
-    tzname       => $tzname,
-    dtstart      => to_icaldate($std)
-);
-$vtimezone->add_entry($standard);
-
-$vcalendar->add_entry($vtimezone);
 
 # Outputs the calendar as a string
-my $text =
-  encode_string( $cfg->{output_encoding} || 'utf8', $vcalendar->as_string );
-if ( $opt{output} ) {
-    local *FH;
-    open FH, ">$opt{output}" or die "Failed to write $opt{output}";
-    print FH $text;
-    close FH;
+my $fh;
+if ( my $filename = $opt{output} || $opt{update} ) {
+    open $fh, ">$filename" or die "Failed to write $filename";
 }
 else {
-    print $text;
+    $fh = *STDOUT;
 }
+print $fh encode_string( $cfg->{output_encoding} || 'utf8',
+    $vcalendar->as_string );
+close $fh;
 
 1;
 __END__

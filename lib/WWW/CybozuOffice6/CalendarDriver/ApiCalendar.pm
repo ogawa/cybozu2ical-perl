@@ -13,15 +13,16 @@ use WWW::CybozuOffice6::Calendar::Event;
 use WWW::CybozuOffice6::Calendar::RecurrentEvent;
 
 sub request {
-    my $driver     = shift;
-    my ($cal)      = @_;
-    my $date_range = $cal->{date_range} || 30;
+    my $driver = shift;
+    my ($cal) = @_;
 
-    my $now = DateTime->now;
-    my $setdate =
-      $now->clone->subtract( days => $date_range )->strftime('da.%Y.%m.%d');
-    my $enddate =
-      $now->clone->add( days => $date_range )->strftime('da.%Y.%m.%d');
+    my $now     = DateTime->now;
+    my $setdate = 'da.' . $now->year . '.01.01';
+    my $enddate = 'da.' . ( $now->year + 10 ) . '.12.31';
+    if ( my $date_range = $cal->{date_range} ) {
+        $setdate =
+          $now->clone->subtract( days => $date_range )->strftime('da.%Y.%m.%d');
+    }
 
     my $ua         = LWP::UserAgent->new;
     my $auth_param = {
