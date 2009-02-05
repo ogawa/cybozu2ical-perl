@@ -17,7 +17,7 @@ use URI;
 use Pod::Usage;
 use Getopt::Long;
 
-our $VERSION = '0.32';
+our $VERSION = '0.33';
 
 ###
 ### TRICK (stop escaping for 'exdate' property)
@@ -369,6 +369,12 @@ installed on your box.
 Specify the output file.  By default, this application outputs to
 STDOUT.
 
+=item --update /path/to/output.ics
+
+Specify the output file.  Instead of overwriting an iCalendar file,
+this option allows you to merge the original file with newly obtained
+CybozuOffice 6 events.
+
 =item --conf /path/to/config.yaml
 
 Specify the configuration file.  By default, C<config.yaml> in the
@@ -394,11 +400,11 @@ Specify the output CSV file for debugging.
 
 =item --uid, --no-uid
 
-Enable/Disable UID fields of the iCalendar file. (Default: Enable)
+Enable/Disable UID fields of the iCalendar file. (Default: Enabled)
 
 =item --url, --no-url
 
-Enable/Disable URL fields of the iCalendar file. (Default: Disable)
+Enable/Disable URL fields of the iCalendar file. (Default: Disabled)
 
 =item --help
 
@@ -463,8 +469,9 @@ strongly recommended.  Otherwise, you have to use C<ApiCalendar>.
 =item date_range (experimental)
 
 Set the date range of calendar, which means C<cybozu2ical> handles
-calendar items between N days before and after.  Default C<date_range>
-is 30.
+calendar items from N days before to the end.  By default,
+C<cybozu2ical> handles calendar items from the beginning of the
+current year to the end.
 
 =back
 
