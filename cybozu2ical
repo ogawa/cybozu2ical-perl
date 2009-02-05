@@ -225,6 +225,14 @@ sub update_vcalendar {
             push @common_entries, $entry;
         }
     }
+    my $dt = DateTime->today;
+    if ( $param->{date_range} ) {
+        $dt->subtract( days => $param->{date_range} );
+        $dt->truncate( to => 'day' );
+    }
+    else {
+        $dt->truncate( to => 'year' );
+    }
     for my $entry ( @{ $vcal_orig->{entries} } ) {
         if ( $entry->isa('Data::ICal::Entry::Event') ) {
             my $uid_prop = $entry->properties->{uid}->[0]
@@ -232,14 +240,19 @@ sub update_vcalendar {
             my $uid = $uid_prop->value
               or next;
             unless ( exists $event_entries{$uid} ) {
-#		my $dtstart_prop = $entry->properties->{dtstart}->[0];
-#		print Dumper($entry->properties);
-                $entry->add_properties( status => 'CANCELLED' );
+                my $dt_prop = $entry->properties->{dtend}->[0]
+                  || $entry->properties->{dtstart}->[0];
+                if ( $dt_prop && $dt_prop->value =~ m/^(\d{4})(\d{2})(\d{2})/ )
+                {
+                    my $duration =
+                      DateTime->new( year => $1, month => $2, day => $3 ) - $dt;
+                    $entry->add_properties( status => 'CANCELLED' )
+                      if $duration->is_positive;
+                }
                 $event_entries{$uid} = $entry;
             }
         }
     }
-    exit;
     $vcalendar->{entries} = [ @common_entries, values %event_entries ];
     $vcalendar;
 }

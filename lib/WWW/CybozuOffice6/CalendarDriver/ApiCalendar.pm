@@ -16,7 +16,7 @@ sub request {
     my $driver = shift;
     my ($cal) = @_;
 
-    my $now     = DateTime->now;
+    my $now     = DateTime->today;
     my $setdate = 'da.' . $now->year . '.01.01';
     my $enddate = 'da.' . ( $now->year + 10 ) . '.12.31';
     if ( my $date_range = $cal->{date_range} ) {
