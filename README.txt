@@ -19,7 +19,7 @@ REQUIREMENT
     installed on your box.
 
     WWW::CybozuOffice6::Calendar
-    Text::CSV_XS or Text::CSV
+    Text::CSV 1.0+
     DateTime
     LWP::UserAgent
     Class::Accessor::Fast

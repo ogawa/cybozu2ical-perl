@@ -346,7 +346,7 @@ installed on your box.
 
 =item WWW::CybozuOffice6::Calendar
 
-=item Text::CSV_XS or Text::CSV
+=item Text::CSV 1.0+
 
 =item DateTime
 

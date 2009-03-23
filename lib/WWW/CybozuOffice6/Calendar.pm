@@ -106,7 +106,7 @@ installed on your box.
 
 =over 4
 
-=item Text::CSV_XS or Text::CSV
+=item Text::CSV 1.0+
 
 =item DateTime
 
