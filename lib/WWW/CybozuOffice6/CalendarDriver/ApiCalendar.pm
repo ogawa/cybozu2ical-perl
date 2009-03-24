@@ -44,6 +44,9 @@ sub request {
     );
     confess 'Failed to access ApiCalendar API: ' . $res->status_line
       unless $res->is_success;
+    if ( my $err = $res->header('x-cybozu-error') ) {
+        confess 'Failed to access ApiCalendar API: CybozuError = ' . $err;
+    }
 
     my @lines;
     for my $line ( split( /\r?\n/, $res->content ) ) {

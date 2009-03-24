@@ -28,6 +28,9 @@ sub request {
     my $res = $ua->post( $cal->{url} . '?page=SyncCalendar', $auth_param );
     confess 'Failed to access SyncCalendar API: ' . $res->status_line
       unless $res->is_success;
+    if ( my $err = $res->header('x-cybozu-error') ) {
+        confess 'Failed to access ApiCalendar API: CybozuError = ' . $err;
+    }
 
     my $content = $res->content;
     from_to( $content, $cal->{input_encoding} || 'shiftjis', 'utf8' );
