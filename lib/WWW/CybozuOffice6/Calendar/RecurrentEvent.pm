@@ -9,7 +9,8 @@ use DateTime;
 __PACKAGE__->mk_accessors(qw( rrule frequency frequency_value until ));
 
 sub exdates {
-    my $this = shift;
+    my ($this, $value) = @_;
+    return $this->{exdates} = $value if $value;
     return unless $this->{exdates};
     my $exdates = $this->{exdates};
     wantarray ? @$exdates : @$exdates[0];
@@ -44,7 +45,7 @@ sub parse {
     else {
         %rrule = ( FREQ => $FREQUENCY{$type} );
     }
-    if ( $param{day} =~ /^\d(SU|MO|TU|WE|TH|FR|SA)$/ ) {
+    if ( $day =~ /^\d(SU|MO|TU|WE|TH|FR|SA)$/ ) {
         $rrule{BYDAY}    = $day;
         $rrule{INTERVAL} = 1;
     }

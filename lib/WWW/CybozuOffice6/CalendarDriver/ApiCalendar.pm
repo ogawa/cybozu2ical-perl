@@ -114,7 +114,7 @@ sub get_items {
 
         $param{time_zone} = $cal->{time_zone} || 'Asia/Tokyo';
 
-        if ( $num_fields > 14 ) {
+        if ( $num_fields >= 14 ) {
             my @exception = @fields[ 14 .. $num_fields ];
             $param{exception} = \@exception;
         }
