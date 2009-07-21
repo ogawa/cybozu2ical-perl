@@ -11,7 +11,7 @@ use LWP::UserAgent;
 use WWW::CybozuOffice6::Calendar::Event;
 use WWW::CybozuOffice6::Calendar::RecurrentEvent;
 
-our $VERSION = '0.32';
+our $VERSION = '0.35';
 
 sub new {
     my $class   = shift;
