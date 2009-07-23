@@ -9,7 +9,7 @@ use DateTime;
 __PACKAGE__->mk_accessors(qw( rrule frequency frequency_value until ));
 
 sub exdates {
-    my ($this, $value) = @_;
+    my ( $this, $value ) = @_;
     return $this->{exdates} = $value if $value;
     return unless $this->{exdates};
     my $exdates = $this->{exdates};
@@ -21,7 +21,16 @@ our %FREQUENCY = (
     m => 'MONTHLY',
     w => 'WEEKLY',
     d => 'DAILY',
-    n => 'WEEKDAYS'
+
+    # weekdays
+    n => 'WEEKLY',
+
+    # fixed weekday, monthly
+    1 => 'MONTHLY',
+    2 => 'MONTHLY',
+    3 => 'MONTHLY',
+    4 => 'MONTHLY',
+    5 => 'MONTHLY',
 );
 our @WEEK_STRING = ( 'SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA' );
 
@@ -31,23 +40,16 @@ sub parse {
 
     my ( $type, $day ) = ( $param{type}, $param{day} );
     return
-      unless defined $type
-          && ( $type =~ /^[1-5]$/ || exists $FREQUENCY{$type} );
-
-    ( $type, $day ) = ( 'm', $type . $WEEK_STRING[$day] )
-      if $type =~ /^[1-5]$/;
+      unless defined $type && exists $FREQUENCY{$type};
 
     # rrule
-    my %rrule = ();
-    if ( $FREQUENCY{$type} eq 'WEEKDAYS' ) {
-        %rrule = ( FREQ => 'WEEKLY', BYDAY => 'MO,TU,WE,TH,FR' );
-    }
-    else {
-        %rrule = ( FREQ => $FREQUENCY{$type} );
-    }
-    if ( $day =~ /^\d(SU|MO|TU|WE|TH|FR|SA)$/ ) {
-        $rrule{BYDAY}    = $day;
+    my %rrule = ( FREQ => $FREQUENCY{$type} );
+    if ( $type =~ /^[1-5]$/ ) {
+        $rrule{BYDAY}    = $type . $WEEK_STRING[$day];
         $rrule{INTERVAL} = 1;
+    }
+    elsif ( $type eq 'n' ) {
+        $rrule{BYDAY} = 'MO,TU,WE,TH,FR';
     }
 
     # until
