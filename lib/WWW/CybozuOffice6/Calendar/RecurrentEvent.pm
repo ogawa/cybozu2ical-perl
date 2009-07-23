@@ -38,11 +38,10 @@ sub parse {
     my ( $this, %param ) = @_;
     $this->SUPER::parse(%param);
 
-    my ( $type, $day ) = ( $param{type}, $param{day} );
-    return
-      unless defined $type && exists $FREQUENCY{$type};
-
     # rrule
+    my ( $type, $day ) = ( $param{type}, $param{day} );
+    return unless defined $type && exists $FREQUENCY{$type};
+
     my %rrule = ( FREQ => $FREQUENCY{$type} );
     if ( $type =~ /^[1-5]$/ ) {
         $rrule{BYDAY}    = $type . $WEEK_STRING[$day];
