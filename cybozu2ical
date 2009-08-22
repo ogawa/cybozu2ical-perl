@@ -292,7 +292,7 @@ else {
 if ( $opt{'output-csv'} ) {
     local *FH;
     open FH, ">$opt{'output-csv'}" or die "Failed to write $opt{'output-csv'}";
-    print FH "$_\n" for $cal->response;
+    print FH "$_\r\n" for $cal->response;
     close FH;
 }
 

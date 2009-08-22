@@ -35,6 +35,7 @@ sub request {
 sub read_from_csv_file {
     my $cal = shift;
     my ($file) = @_;
+    local $/ = "\r\n";
     local *FH;
     open FH, $file or confess "Failed to read $file";
     my @lines;
