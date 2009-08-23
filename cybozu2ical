@@ -130,9 +130,9 @@ sub generate_vcalendar {
         my %args   = (
             summary     => decode_utf8( $item->summary ),
             description => decode_utf8( $item->description ),
-            created     => to_icaldate( $item->created ),
-            dtstamp     => to_icaldate( $item->modified ),
         );
+        $args{created} = to_icaldate( $item->created )  if $item->created;
+        $args{dtstamp} = to_icaldate( $item->modified ) if $item->modified;
 
         if ( $item->is_full_day ) {
             $args{dtstart} =
@@ -182,10 +182,10 @@ sub generate_vcalendar {
         # set uid (recommended to be the identical syntax to RFC822)
         $args{uid} =
           $item->id . '@' . ( URI->new( $cal->url )->host || 'localhost' )
-          if $param->{uid};
+          if $param->{uid} && $item->id;
 
         $args{url} = $cal->url . '?page=ScheduleView&EID=' . $item->id
-          if $param->{url};
+          if $param->{url} && $cal->url && $item->id;
 
         # $args{class}  = $item->is_private ? 'PRIVATE'     : 'PUBLIC';
         # $args{transp} = $item->is_private ? 'TRANSPARENT' : 'OPAQUE';

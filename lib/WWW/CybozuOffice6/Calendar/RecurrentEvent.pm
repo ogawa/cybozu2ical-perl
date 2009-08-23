@@ -17,13 +17,13 @@ sub exdates {
 }
 
 our %FREQUENCY = (
-    y => 'YEARLY',
-    m => 'MONTHLY',
-    w => 'WEEKLY',
-    d => 'DAILY',
+    'y' => 'YEARLY',
+    'm' => 'MONTHLY',
+    'w' => 'WEEKLY',
+    'd' => 'DAILY',
 
     # weekdays
-    n => 'WEEKLY',
+    'n' => 'WEEKLY',
 
     # fixed weekday, monthly
     1 => 'MONTHLY',
@@ -40,34 +40,42 @@ sub parse {
 
     # rrule
     my ( $type, $day ) = ( $param{type}, $param{day} );
-    return unless defined $type && exists $FREQUENCY{$type};
-
-    my %rrule = ( FREQ => $FREQUENCY{$type} );
-    if ( $type =~ /^[1-5]$/ ) {
-        $rrule{BYDAY}    = $type . $WEEK_STRING[$day];
-        $rrule{INTERVAL} = 1;
-    }
-    elsif ( $type eq 'n' ) {
-        $rrule{BYDAY} = 'MO,TU,WE,TH,FR';
-    }
-
-    # until
-    if (   $param{until_date} =~ m!^(\d+)/(\d+)/(\d+)$!
-        || $param{until_date} =~ m!^da\.(\d+)\.(\d+)\.(\d+)$! )
-    {
-        my %args = ( year => $1, month => $2, day => $3 );
-        my $until;
-        if ( $this->is_full_day ) {
-            $until = $this->to_datetime( $param{until_date}, ':' );
+    if ( defined $type && defined $day && exists $FREQUENCY{$type} ) {
+        my %rrule = ( FREQ => $FREQUENCY{$type} );
+        if ( $type =~ /^[1-5]$/ ) {
+            $rrule{BYDAY}    = $type . $WEEK_STRING[$day];
+            $rrule{INTERVAL} = 1;
         }
-        else {
-            $until = $this->end->clone->set(%args);
-            $until->set_time_zone('UTC');    # timezone must be UTC
+        elsif ( $type eq 'n' ) {
+            $rrule{BYDAY} = 'MO,TU,WE,TH,FR';
         }
-        $rrule{UNTIL} = $until;
-    }
 
-    $this->rrule( \%rrule );
+        # until
+        if (
+            exists $param{until_date}
+            && (   $param{until_date} =~ m!^(\d+)/(\d+)/(\d+)$!
+                || $param{until_date} =~ m!^da\.(\d+)\.(\d+)\.(\d+)$! )
+          )
+        {
+            my %args = ( year => $1, month => $2, day => $3 );
+            my $until;
+            if ( $this->is_full_day ) {
+                $until = $this->to_datetime( $param{until_date}, '' );
+            }
+            else {
+                $until = $this->end->clone->set(%args);
+                $until->set_time_zone('UTC');    # timezone must be UTC
+            }
+            $rrule{UNTIL} = $until;
+        }
+
+        $this->rrule( \%rrule );
+
+        # for compatibility
+        $this->frequency( $rrule{FREQ} );
+        $this->frequency_value( $day || 0 );
+        $this->until( $rrule{UNTIL} ) if exists $rrule{UNTIL};
+    }
 
     # exdates
     if ( defined $param{exception} ) {
@@ -77,11 +85,6 @@ sub parse {
         }
         $this->exdates( \@exdates );
     }
-
-    # for compatibility
-    $this->frequency( $FREQUENCY{$type} );
-    $this->frequency_value( $day || 0 );
-    $this->until( $rrule{UNTIL} ) if exists $rrule{UNTIL};
 
     1;
 }

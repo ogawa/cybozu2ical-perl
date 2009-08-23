@@ -24,34 +24,51 @@ __PACKAGE__->mk_accessors(
 sub parse {
     my ( $this, %param ) = @_;
 
-    $this->id( $param{id}               || '0' );
+    # id
+    $this->id( $param{id} ) if $param{id};
+
+    # time_zone (must be set before calling to_datetime method)
     $this->time_zone( $param{time_zone} || 'Asia/Tokyo' );
 
-    my $start = $this->to_datetime( $param{set_date}, $param{set_time} );
-    my $end   = $this->to_datetime( $param{end_date}, $param{end_time} );
-    return unless $start && $end;
+    # start & end
+    if ( exists $param{set_date} && exists $param{end_date} ) {
+        $param{set_time} ||= '';
+        $param{end_time} ||= '';
+        my $start = $this->to_datetime( $param{set_date}, $param{set_time} );
+        my $end   = $this->to_datetime( $param{end_date}, $param{end_time} );
+        if ( $start && $end ) {
 
-    # (set_time == empty) => A full-day event
-    # (set_time != empty) && (end_time == empty) => A malformed event
-    if ( $param{set_time} eq '' || $param{set_time} eq ':' ) {
-        $start = $start->truncate( to => 'day' );
-        $end = $end->add( days => 1 )->truncate( to => 'day' );
-        $this->is_full_day(1);
+            # special cases:
+            #   is_empty(set_time) => full-day event
+            #   !is_empty(set_time) && is_empty(end_time) => malformed event
+            if ( $param{set_time} eq '' || $param{set_time} eq ':' ) {
+                $start = $start->truncate( to => 'day' );
+                $end = $end->add( days => 1 )->truncate( to => 'day' );
+                $this->is_full_day(1);
+            }
+            elsif ( $param{end_time} eq '' || $param{end_time} eq ':' ) {
+                $end = $start->clone->add( minutes => 10 );
+            }
+
+            $this->start($start);
+            $this->end($end);
+        }
     }
-    elsif ( $param{end_time} eq '' || $param{end_time} eq ':' ) {
-        $end = $start->clone->add( minutes => 10 );
+
+    # created
+    if ( exists $param{timestamp} ) {
+        $param{timestamp} =~ s/^ts\.//;    # remove rubbish
+        $this->created(
+            DateTime->from_epoch( epoch => $param{timestamp} || 0 ) );
     }
-    $this->start($start);
-    $this->end($end);
 
-    $param{timestamp} =~ s/^ts\.//;    # remove rubbish
-    $this->created( DateTime->from_epoch( epoch => $param{timestamp} || 0 ) );
-
+    # summary & description
     my $summary =
-      ( $param{event} ? $param{event} . ': ' : '' ) . $param{detail};
+      ( $param{event} ? $param{event} . ': ' : '' ) . ( $param{detail} || '' );
     $this->summary($summary);
     $this->description( $param{memo} || $summary );
 
+    # misc.
     $this->is_shared(1)  if $param{shared};
     $this->is_private(1) if $param{private};
     1;
