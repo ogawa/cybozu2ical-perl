@@ -51,11 +51,8 @@ sub parse {
         }
 
         # until
-        if (
-            exists $param{until_date}
-            && (   $param{until_date} =~ m!^(\d+)/(\d+)/(\d+)$!
-                || $param{until_date} =~ m!^da\.(\d+)\.(\d+)\.(\d+)$! )
-          )
+        if ( exists $param{until_date}
+            && $param{until_date} =~ m!^(\d+)/(\d+)/(\d+)$! )
         {
             my %args = ( year => $1, month => $2, day => $3 );
             my $until;

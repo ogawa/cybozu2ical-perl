@@ -75,6 +75,9 @@ sub get_items {
             qw(id timestamp set_time end_time type day private banner event detail memo)
           } = @fields[ 0, 1, 5 .. 13 ];
 
+        $param{set_time} = '' if $param{set_time} eq ':';
+        $param{end_time} = '' if $param{end_time} eq ':';
+
         $param{time_zone} = $cal->{time_zone} || 'Asia/Tokyo';
 
         if ( $num_fields >= 14 ) {

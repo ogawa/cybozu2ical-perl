@@ -114,17 +114,24 @@ sub get_items {
 
         $param{time_zone} = $cal->{time_zone} || 'Asia/Tokyo';
 
-        if ( $num_fields >= 14 ) {
-            my @exception = @fields[ 14 .. $num_fields ];
+        if ( $num_fields >= 15 ) {
+            my @exception =
+              map { _format_date_string($_) } @fields[ 15 .. $num_fields ];
             $param{exception} = \@exception;
         }
 
         my $item;
         if ( !$param{type} ) {
+            for my $col (qw(set_date end_date)) {
+                $param{$col} = _format_date_string( $param{$col} );
+            }
             $item = WWW::CybozuOffice6::Calendar::Event->new(%param);
         }
         else {
             @param{qw(end_date until_date)} = @fields[ 8, 9 ];
+            for my $col (qw(set_date end_date until_date)) {
+                $param{$col} = _format_date_string( $param{$col} );
+            }
             $item = WWW::CybozuOffice6::Calendar::RecurrentEvent->new(%param);
         }
 
@@ -133,6 +140,15 @@ sub get_items {
         push @items, $item;
     }
     wantarray ? @items : $items[0];
+}
+
+# convert 'da.1970.1.1' to '1970/01/01'
+sub _format_date_string {
+    my $s = shift;
+    if ( $s =~ m!^da\.(\d+)\.(\d+)\.(\d+)$! ) {
+        $s = sprintf( '%04d/%02d/%02d', $1, $2, $3 );
+    }
+    $s;
 }
 
 1;

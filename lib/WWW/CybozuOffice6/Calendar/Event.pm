@@ -42,12 +42,12 @@ sub parse {
             # special cases:
             #   is_empty(set_time) => full-day event
             #   !is_empty(set_time) && is_empty(end_time) => malformed event
-            if ( $param{set_time} eq '' || $param{set_time} eq ':' ) {
+            if ( $param{set_time} eq '' ) {
                 $start = $start->truncate( to => 'day' );
                 $end = $end->add( days => 1 )->truncate( to => 'day' );
                 $this->is_full_day(1);
             }
-            elsif ( $param{end_time} eq '' || $param{end_time} eq ':' ) {
+            elsif ( $param{end_time} eq '' ) {
                 $end = $start->clone->add( minutes => 10 );
             }
 
@@ -81,14 +81,10 @@ sub to_datetime {
     my ( $ymd, $hms ) = @_;
 
     my %args;
-    return
-      unless $ymd
-          && (   $ymd =~ m!^da\.(\d+)\.(\d+)\.(\d+)$!
-              || $ymd =~ m!^(\d+)/(\d+)/(\d+)$! );
+    return unless $ymd && $ymd =~ m!^(\d+)/(\d+)/(\d+)$!;
     @args{qw(year month day)} = ( $1, $2, $3 );
 
-    if ( $hms && $hms ne ':' ) {
-        return unless $hms =~ m!^(\d+):(\d+)(?:\:?(\d+)?)$!;
+    if ( $hms && $hms =~ m!^(\d+):(\d+)(?:\:?(\d+)?)$! ) {
         @args{qw(hour minute second)} = ( $1, $2, $3 || 0 );
         @args{qw(hour minute second)} = ( 23, 59, 59 ) if $args{hour} > 23;
     }
