@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/opt/local/bin/perl
 # cybozu2ical: Convert Cybozu Office calendar into iCalendar format
 #
 # $Id$

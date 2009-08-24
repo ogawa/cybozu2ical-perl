@@ -11,6 +11,7 @@ sub new {
     my $self  = {
         is_full_day => 0,
         modified    => DateTime->now,
+        time_zone   => 'Asia/Tokyo',
     };
     bless $self, $class;
     return unless $self->parse(@_);
@@ -28,7 +29,7 @@ sub parse {
     $this->id( $param{id} ) if $param{id};
 
     # time_zone (must be set before calling to_datetime method)
-    $this->time_zone( $param{time_zone} || 'Asia/Tokyo' );
+    $this->time_zone( $param{time_zone} ) if $param{time_zone};
 
     # start & end
     if ( exists $param{set_date} && exists $param{end_date} ) {
@@ -95,7 +96,7 @@ sub to_datetime {
         @args{qw(hour minute second)} = ( 0, 0, 0 );
     }
 
-    $args{time_zone} = $this->time_zone;
+    $args{time_zone} = $this->time_zone || 'Asia/Tokyo';
 
     DateTime->new(%args);
 }
