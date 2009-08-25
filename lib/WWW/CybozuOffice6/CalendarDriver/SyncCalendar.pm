@@ -36,8 +36,8 @@ sub request {
     from_to( $content, $cal->{input_encoding} || 'shiftjis', 'utf8' );
     my @lines = grep /^\d+,ts\.\d+,/, split( /\r\n/, $content );
 
+    carp 'No calendar events found' unless scalar @lines;
     $cal->{response} = \@lines;
-    scalar @lines ? \@lines : undef;
 }
 
 sub get_items {

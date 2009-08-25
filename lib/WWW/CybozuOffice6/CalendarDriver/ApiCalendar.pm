@@ -73,8 +73,8 @@ sub request {
         push @lines, $content;
     }
 
+    carp 'No calendar events found' unless scalar @lines;
     $cal->{response} = \@lines;
-    scalar @lines ? \@lines : undef;
 }
 
 sub get_items {

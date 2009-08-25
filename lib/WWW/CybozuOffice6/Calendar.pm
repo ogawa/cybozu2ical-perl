@@ -44,9 +44,9 @@ sub read_from_csv_file {
         push @lines, $_;
     }
     close(FH);
-    $cal->{response} = \@lines;
 
-    scalar @lines ? \@lines : undef;
+    carp 'No calendar events found' unless scalar @lines;
+    $cal->{response} = \@lines;
 }
 
 sub response {
