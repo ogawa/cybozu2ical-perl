@@ -11,7 +11,7 @@ use LWP::UserAgent;
 use WWW::CybozuOffice6::Calendar::Event;
 use WWW::CybozuOffice6::Calendar::RecurrentEvent;
 
-our $VERSION = '0.35';
+our $VERSION = '0.36';
 
 sub new {
     my $class   = shift;
@@ -256,18 +256,18 @@ None.
 The development version is always available from the following
 subversion repository:
 
-  http://code.as-is.net/svn/public/WWW-CybozuOffice6-Calendar/trunk/
+  http://ogawa.googlecode.com/svn/trunk/WWW-CybozuOffice6-Calendar/
 
 You can browse the files via Trac from the following:
 
-  http://code.as-is.net/public/browser/WWW-CybozuOffice6-Calendar/trunk/
+  http://code.google.com/p/ogawa/source/browse/trunk/WWW-CybozuOffice6-Calendar/
 
 Any comments, suggestions, or patches are welcome.
 
 =head1 LICENSE
 
-Copyright (c) 2008 Hirotaka Ogawa E<lt>hirotaka.ogawa at gmail.comE<gt>.
-All rights reserved.
+Copyright (c) 2008-2009 Hirotaka Ogawa E<lt>hirotaka.ogawa at
+gmail.comE<gt>.  All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the terms of either:

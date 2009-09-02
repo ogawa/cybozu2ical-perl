@@ -6,7 +6,7 @@ SYNOPSIS
       % cybozu2ical --conf /path/to/config.yaml
 
 DESCRIPTION
-    "cybozu2ical" is a command line application that fetches calendar items
+    `cybozu2ical' is a command line application that fetches calendar items
     from Cybozu Office 6 or later, and converts them into an iCalendar file.
     It allows you to easily integrate the Cybozu Calendar into
     iCalendar-enabled Calendar applications, such as Microsoft Outlook,
@@ -25,7 +25,6 @@ REQUIREMENT
     Class::Accessor::Fast
     Data::ICal
     YAML or YAML::Tiny
-
 OPTIONS
     --output /path/to/output.ics
         Specify the output file. By default, this application outputs to
@@ -37,7 +36,7 @@ OPTIONS
         obtained CybozuOffice 6 events.
 
     --conf /path/to/config.yaml
-        Specify the configuration file. By default, "config.yaml" in the
+        Specify the configuration file. By default, `config.yaml' in the
         current directory will be used.
 
     --compat-google-calendar
@@ -65,8 +64,8 @@ OPTIONS
 
 CONFIGURATION
     The distributions includes a sample configuration file
-    "config.yaml.sample". You can rename it to "config.yaml" and configure
-    "cybozu2ical".
+    `config.yaml.sample'. You can rename it to `config.yaml' and configure
+    `cybozu2ical'.
 
     cybozu_url
         Set the URL of your Cybozu Office 6 or later.
@@ -89,44 +88,44 @@ CONFIGURATION
         Set the short timezone name of your Cybozu Office (e.g., JST).
 
     input_encoding
-        Set the charset of Cybozu Office. By default, "input_encoding" is
+        Set the charset of Cybozu Office. By default, `input_encoding' is
         "shiftjis".
 
     output_encoding
-        Set the charset of the iCalendar file. By default, "output_encoding"
+        Set the charset of the iCalendar file. By default, `output_encoding'
         is "utf8". If you need to output multibyte strings as Numeric
-        Character References for some reason, set "output_encoding" to
+        Character References for some reason, set `output_encoding' to
         "ncr".
 
     calendar_driver
-        Set the calendar driver that "cybozu2ical" employs. By default,
-        "ApiCalendar" is used as "calendar_driver".
+        Set the calendar driver that `cybozu2ical' employs. By default,
+        `ApiCalendar' is used as `calendar_driver'.
 
-        Currently, "ApiCalendar" and "SyncCalendar" drivers are shipped with
-        "cybozu2ical". If you are using Cybozu Office 6, "SyncCalendar" is
-        strongly recommended. Otherwise, you have to use "ApiCalendar".
+        Currently, `ApiCalendar' and `SyncCalendar' drivers are shipped with
+        `cybozu2ical'. If you are using Cybozu Office 6, `SyncCalendar' is
+        strongly recommended. Otherwise, you have to use `ApiCalendar'.
 
     date_range (experimental)
-        Set the date range of calendar, which means "cybozu2ical" handles
+        Set the date range of calendar, which means `cybozu2ical' handles
         calendar items from N days before to the end. By default,
-        "cybozu2ical" handles calendar items from the beginning of the
+        `cybozu2ical' handles calendar items from the beginning of the
         current year to the end.
 
 DEVELOPMENT
     The development version is always available from the following
     subversion repository:
 
-      http://code.as-is.net/svn/public/cybozu2ical/trunk/
+      http://ogawa.googlecode.com/svn/trunk/cybozu2ical/
 
     You can browse the files via Trac from the following:
 
-      http://code.as-is.net/public/browser/cybozu2ical/trunk/
+      http://code.google.com/p/ogawa/source/browse/trunk/cybozu2ical/
 
     Any comments, suggestions, or patches are welcome.
 
 LICENSE
-    Copyright (c) 2008 Hirotaka Ogawa <hirotaka.ogawa at gmail.com>. All
-    rights reserved.
+    Copyright (c) 2008-2009 Hirotaka Ogawa <hirotaka.ogawa at gmail.com>.
+    All rights reserved.
 
     This library is free software; you can redistribute it and/or modify it
     under the terms of either:
@@ -134,6 +133,6 @@ LICENSE
        a) the GNU General Public License as published by the Free Software
           Foundation; either version 1, or (at your option) any later
           version, or
-                             
-   b) the "Artistic License" which comes with Perl.
+                         
+       b) the "Artistic License" which comes with Perl.
 
