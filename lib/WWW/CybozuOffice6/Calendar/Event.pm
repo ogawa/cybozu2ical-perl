@@ -19,7 +19,7 @@ sub new {
 }
 
 __PACKAGE__->mk_accessors(
-    qw( id start end summary description created time_zone modified is_shared is_private is_full_day comment )
+    qw( id start end summary description created time_zone modified is_shared is_private is_full_day comment location )
 );
 
 sub parse {
@@ -68,6 +68,7 @@ sub parse {
       ( $param{event} ? $param{event} . ': ' : '' ) . ( $param{detail} || '' );
     $this->summary($summary);
     $this->description( $param{memo} || $summary );
+    $this->location( $param{location} ) if $param{location};
 
     # misc.
     $this->is_shared(1)  if $param{shared};

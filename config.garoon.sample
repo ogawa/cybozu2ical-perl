@@ -1,0 +1,12 @@
+cybozu_url: http://www.example.com/cbgrn/grn.cgi
+calname: Your Calendar Name
+username: user
+password: pass
+time_zone: Asia/Tokyo
+tzname: JST
+input_encoding: shiftjis
+output_encoding: utf8
+#calendar_driver: SyncCalendar
+#calendar_driver: ApiCalendar
+calendar_driver: GaroonCSV
+date_range: 30

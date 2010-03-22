@@ -130,6 +130,7 @@ sub generate_vcalendar {
         my %args   = (
             summary     => decode_utf8( $item->summary ),
             description => decode_utf8( $item->description ),
+            location    => decode_utf8( $item->location ),
         );
         $args{created} = to_icaldate( $item->created )  if $item->created;
         $args{dtstamp} = to_icaldate( $item->modified ) if $item->modified;
