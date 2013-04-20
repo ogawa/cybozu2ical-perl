@@ -1,4 +1,4 @@
-# Cybozu2ICal
+# cybozu2ical-perl
 
 Converts Cybozu Office Scheduler to ''ical'' format on the wire.
 
